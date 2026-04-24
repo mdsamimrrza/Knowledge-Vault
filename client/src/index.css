@@ -1,0 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Font Families */
+  --font-display: 'Crimson Pro', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Color Palette - Serene, Intellectual, Clean */
+  --background: 174 15% 94%;
+  /* Soft Teal Tinted Gray */
+  /* Off-white paper */
+  --foreground: 220 20% 18%;
+  /* Soft black ink */
+
+  --card: 0 0% 100%;
+  --card-foreground: 220 20% 18%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 20% 18%;
+
+  --primary: 174 42% 35%;
+  /* Deep Teal */
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 174 20% 95%;
+  /* Very Light Teal/Gray */
+  --secondary-foreground: 174 42% 15%;
+
+  --muted: 174 20% 95%;
+  --muted-foreground: 174 12% 45%;
+
+  --accent: 174 60% 50%;
+  /* Vibrant Teal */
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 0 65% 55%;
+  /* Muted Red */
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 174 20% 88%;
+  --input: 174 20% 88%;
+  --ring: 174 42% 35%;
+
+  --radius: 1rem;
+}
+
+.dark {
+  --background: 222 47% 6%;      /* Deep Navy/Black */
+  --foreground: 210 40% 98%;
+  
+  --card: 222 47% 9%;
+  --card-foreground: 210 40% 98%;
+  
+  --popover: 222 47% 9%;
+  --popover-foreground: 210 40% 98%;
+  
+  --primary: 174 60% 45%;        /* Lighter Teal for Dark Mode */
+  --primary-foreground: 222 47% 6%;
+  
+  --secondary: 222 47% 12%;
+  --secondary-foreground: 210 40% 98%;
+  
+  --muted: 222 47% 12%;
+  --muted-foreground: 215 20% 65%;
+  
+  --accent: 174 60% 45%;
+  --accent-foreground: 222 47% 6%;
+  
+  --destructive: 0 62% 30%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 217 32% 17%;
+  --input: 217 32% 17%;
+  --ring: 174 60% 45%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased min-h-screen;
+    background-image:
+      radial-gradient(at 0% 0%, hsla(174, 42%, 35%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(174, 42%, 35%, 0.05) 0px, transparent 50%);
+    font-family: var(--font-body);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    @apply font-semibold tracking-tight text-primary;
+  }
+
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
+}
+
+@layer components {
+
+  /* Typography for Markdown Content */
+  .prose-content {
+    @apply text-lg leading-relaxed text-foreground/90 max-w-none;
+  }
+
+  .prose-content h1 {
+    @apply text-4xl mb-6 mt-10 pb-2 border-b-2 border-border/30;
+  }
+
+  .prose-content h2 {
+    @apply text-2xl mb-5 mt-8;
+  }
+
+  .prose-content h3 {
+    @apply text-xl mb-4 mt-6;
+  }
+
+  .prose-content p {
+    @apply mb-6;
+  }
+
+  .prose-content ul {
+    @apply list-disc list-outside ml-6 mb-6;
+  }
+
+  .prose-content ol {
+    @apply list-decimal list-outside ml-6 mb-6;
+  }
+
+  .prose-content blockquote {
+    @apply border-l-4 border-accent/50 pl-6 py-2 my-6 italic bg-secondary/30 rounded-r-lg;
+  }
+
+  .prose-content code {
+    @apply bg-secondary px-1.5 py-0.5 rounded text-sm text-primary font-medium;
+  }
+
+  .prose-content pre {
+    @apply bg-slate-900 text-slate-100 p-4 rounded-xl overflow-x-auto mb-6 shadow-inner;
+  }
+
+  .prose-content pre code {
+    @apply bg-transparent p-0 text-inherit;
+  }
+
+  .prose-content a {
+    @apply text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary transition-colors;
+  }
+
+  /* Glassy UI Utilities */
+  .glass-card {
+    @apply bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-2xl shadow-primary/5;
+  }
+
+  .shadow-premium {
+    @apply shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)];
+  }
+
+  .glass-sidebar {
+    @apply bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-white/5;
+  }
+
+  .nav-btn-active {
+    @apply bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90;
+  }
+
+  .nav-btn {
+    @apply relative overflow-hidden transition-all duration-200 active:scale-[0.98];
+  }
+
+  .nav-btn::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full transition-transform duration-500;
+  }
+
+  .nav-btn:hover::after {
+    @apply translate-x-full;
+  }
+}
