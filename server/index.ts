@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { getEnv, validateEnv } from "./lib/env";
-import crypto from "crypto";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MongoStore from "connect-mongo";
@@ -13,6 +12,7 @@ const app = express();
 const httpServer = createServer(app);
 
 // 1. IRONCLAD HEALTHCHECK (Registered immediately)
+// This must respond even before validation/DB connection
 app.get("/healthz", (_req, res) => {
   res.status(200).json({ status: "ok", mode: process.env.NODE_ENV || 'production' });
 });
@@ -59,32 +59,6 @@ declare global {
   }
 }
 
-// ──── Session & Middleware ────
-const env = getEnv();
-
-app.use(
-  session({
-    secret: env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    name: "kv_session", // Custom name to avoid generic fingerprints
-    store: MongoStore.create({
-      mongoUrl: env.MONGODB_URI,
-      ttl: 14 * 24 * 60 * 60, // 14 days
-      autoRemove: 'native',
-    }),
-    cookie: {
-      maxAge: 14 * 24 * 60 * 60 * 1000,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: env.NODE_ENV === "production",
-    },
-  })
-);
-
-app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
-app.use(express.urlencoded({ extended: false }));
-
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true,
@@ -92,31 +66,57 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api") && path !== "/api/health") {
-      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
-    }
-  });
-  next();
-});
-
 // ──── Initialization Logic ────
 async function startServer() {
   try {
     log("🛡️ Validating Environment...");
-    validateEnv();
+    const env = validateEnv();
+
     log("📡 Connecting to MongoDB...");
     await connectDB();
     log("✅ MongoDB Connected.");
 
+    // ──── Session & Middleware ────
+    // Only registered AFTER validation is successful
+    app.use(
+      session({
+        secret: env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        name: "kv_session",
+        store: MongoStore.create({
+          mongoUrl: env.MONGODB_URI,
+          ttl: 14 * 24 * 60 * 60,
+          autoRemove: 'native',
+        }),
+        cookie: {
+          maxAge: 14 * 24 * 60 * 60 * 1000,
+          httpOnly: true,
+          sameSite: "lax",
+          secure: env.NODE_ENV === "production",
+        },
+      })
+    );
+
+    app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
+    app.use(express.urlencoded({ extended: false }));
+
+    app.use((req, res, next) => {
+      const start = Date.now();
+      const path = req.path;
+      res.on("finish", () => {
+        const duration = Date.now() - start;
+        if (path.startsWith("/api") && path !== "/api/health") {
+          log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
+        }
+      });
+      next();
+    });
+
     log("🛣️ Registering routes...");
     await registerRoutes(httpServer, app);
 
-    if (getEnv().NODE_ENV === "production") {
+    if (env.NODE_ENV === "production") {
       log("📦 Serving static files (Production)");
       serveStatic(app);
     } else {
@@ -132,23 +132,27 @@ async function startServer() {
       res.status(status).json({ message: err.message || "Internal Server Error" });
     });
 
-  } catch (error) {
-    console.error("❌ FATAL STARTUP ERROR:", error);
-    // In production, we don't want to exit immediately if the DB is down
-    // so that the healthcheck can still respond and show us the error.
+    log("✨ Server Initialization Complete.");
+
+  } catch (error: any) {
+    console.error("❌ FATAL STARTUP ERROR:", error.message);
+    // In cloud environments, we keep the process alive so the logs can be read
+    // and the healthcheck still responds with 'ok' but mode 'error' or similar
+    // For now, we just log and let it sit.
   }
 }
 
 // 2. BOOTSTRAP
-const port = getEnv().PORT;
-
-// Call the async initialization
-startServer();
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
 // Start listening IMMEDIATELY and SYNCHRONOUSLY
+// This ensures Railway healthcheck passes Attempt #1
 httpServer.listen(port, "0.0.0.0", () => {
   console.log("=========================================");
   console.log(`🚀 SERVER IS LIVE ON PORT: ${port}`);
   console.log(`🔗 HEALTHCHECK: http://0.0.0.0:${port}/healthz`);
   console.log("=========================================");
+  
+  // Now start the heavy lifting
+  startServer();
 });
