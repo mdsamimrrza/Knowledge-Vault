@@ -216,41 +216,44 @@ export default function AdminPage() {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="glass-card border-white/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
-                <Users className="w-4 h-4 text-primary" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <Card className="glass-card border-white/10 hover:border-primary/30 transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between pb-1 px-3 md:px-6 pt-3 md:pt-6">
+                <CardTitle className="text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Users</CardTitle>
+                <Users className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+              <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
+                <div className="text-xl md:text-2xl font-bold tracking-tight">{stats?.totalUsers || 0}</div>
               </CardContent>
             </Card>
-            <Card className="glass-card border-white/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Knowledge Articles</CardTitle>
-                <FileText className="w-4 h-4 text-primary" />
+
+            <Card className="glass-card border-white/10 hover:border-primary/30 transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between pb-1 px-3 md:px-6 pt-3 md:pt-6">
+                <CardTitle className="text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-wider">Articles</CardTitle>
+                <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalArticles || 0}</div>
+              <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
+                <div className="text-xl md:text-2xl font-bold tracking-tight">{stats?.totalArticles || 0}</div>
               </CardContent>
             </Card>
-            <Card className="glass-card border-white/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Active Admins</CardTitle>
-                <ShieldCheck className="w-4 h-4 text-green-500" />
+
+            <Card className="glass-card border-white/10 hover:border-green-500/30 transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between pb-1 px-3 md:px-6 pt-3 md:pt-6">
+                <CardTitle className="text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-wider">Admins</CardTitle>
+                <ShieldCheck className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-500" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.adminUsers || 0}</div>
+              <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
+                <div className="text-xl md:text-2xl font-bold tracking-tight">{stats?.adminUsers || 0}</div>
               </CardContent>
             </Card>
-            <Card className="glass-card border-white/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Suspended</CardTitle>
-                <ShieldAlert className="w-4 h-4 text-destructive" />
+
+            <Card className="glass-card border-white/10 hover:border-destructive/30 transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between pb-1 px-3 md:px-6 pt-3 md:pt-6">
+                <CardTitle className="text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-wider">Suspended</CardTitle>
+                <ShieldAlert className="w-3.5 h-3.5 md:w-4 md:h-4 text-destructive" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.bannedUsers || 0}</div>
+              <CardContent className="px-3 md:px-6 pb-3 md:pb-6">
+                <div className="text-xl md:text-2xl font-bold tracking-tight">{stats?.bannedUsers || 0}</div>
               </CardContent>
             </Card>
           </div>
@@ -270,83 +273,153 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="glass-card rounded-2xl overflow-hidden border-white/10">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-white/10">
-                    <TableHead>User</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers?.map((u) => (
-                    <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                            {u.username.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm leading-none">{u.username}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{u.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(u.createdAt), 'MMM d, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {u.isAdmin && (
-                            <span className="bg-green-500/10 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-green-500/20">
-                              Admin
-                            </span>
-                          )}
-                          {u.isBanned && (
-                            <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-destructive/20">
-                              Banned
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={u.isAdmin ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10" : "text-green-500 hover:text-green-600 hover:bg-green-500/10"}
-                            onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isAdmin: !u.isAdmin } })}
-                          >
-                            {u.isAdmin ? <HistoryIcon className="w-3.5 h-3.5 mr-1" /> : <ShieldCheck className="w-3.5 h-3.5 mr-1" />}
-                            {u.isAdmin ? "Demote" : "Promote"}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:bg-destructive/10"
-                            onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isBanned: !u.isBanned } })}
-                          >
-                            <Ban className="w-3.5 h-3.5 mr-1" />
-                            {u.isBanned ? "Unban" : "Ban User"}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:bg-destructive/10"
-                            onClick={() => deleteUserMutation.mutate(u.id)}
-                            disabled={u.id === user?.id}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
+            <div className="md:glass-card md:rounded-2xl md:overflow-hidden md:border md:border-white/10">
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-white/10">
+                      <TableHead>User</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers?.map((u) => (
+                      <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                              {u.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm leading-none">{u.username}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{u.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(u.createdAt), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {u.isAdmin && (
+                              <span className="bg-green-500/10 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-green-500/20">
+                                Admin
+                              </span>
+                            )}
+                            {u.isBanned && (
+                              <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-destructive/20">
+                                Banned
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={u.isAdmin ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10" : "text-green-500 hover:text-green-600 hover:bg-green-500/10"}
+                              onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isAdmin: !u.isAdmin } })}
+                            >
+                              {u.isAdmin ? <HistoryIcon className="w-3.5 h-3.5 mr-1" /> : <ShieldCheck className="w-3.5 h-3.5 mr-1" />}
+                              {u.isAdmin ? "Demote" : "Promote"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isBanned: !u.isBanned } })}
+                              disabled={u.id === user?.id}
+                            >
+                              <Ban className="w-3.5 h-3.5 mr-1" />
+                              {u.isBanned ? "Unban" : "Ban User"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() => deleteUserMutation.mutate(u.id)}
+                              disabled={u.id === user?.id}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {filteredUsers?.map((u) => (
+                  <div key={u.id} className="glass-card rounded-2xl p-4 border border-white/10 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {u.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm">{u.username}</p>
+                          <p className="text-xs text-muted-foreground">{u.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {u.isAdmin && (
+                          <span className="bg-green-500/10 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-green-500/20">
+                            Admin
+                          </span>
+                        )}
+                        {u.isBanned && (
+                          <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-destructive/20">
+                            Banned
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-2">
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`w-10 h-10 rounded-xl ${u.isAdmin ? "text-amber-500 bg-amber-500/5" : "text-green-500 bg-green-500/5"}`}
+                          onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isAdmin: !u.isAdmin } })}
+                          title={u.isAdmin ? "Demote" : "Promote"}
+                        >
+                          {u.isAdmin ? <HistoryIcon className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-10 h-10 rounded-xl text-destructive bg-destructive/5"
+                          onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isBanned: !u.isBanned } })}
+                          disabled={u.id === user?.id}
+                          title={u.isBanned ? "Unban" : "Ban User"}
+                        >
+                          <Ban className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-10 h-10 rounded-xl text-destructive bg-destructive/5"
+                        onClick={() => deleteUserMutation.mutate(u.id)}
+                        disabled={u.id === user?.id}
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -48,8 +48,8 @@ export async function validateEmailDomain(email: string): Promise<boolean> {
  */
 export async function sendOTP(email: string, otp: string, subject = "Security Code Verification") {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log(`[MOCK EMAIL] To: ${email} | OTP: ${otp}`);
-    return;
+    // Mock delivery for non-production/testing
+    return true;
   }
 
   try {

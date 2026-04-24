@@ -103,7 +103,7 @@ router.post("/forgot-password", async (req, res) => {
       { new: true }
     );
 
-    console.log(`🔑 DEBUG: Password reset OTP for ${email} is: ${otp}`);
+
 
     try {
       await sendOTP(normalizedEmail, otp, "Password Reset Code");
