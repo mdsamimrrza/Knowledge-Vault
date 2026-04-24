@@ -3,6 +3,8 @@ import { getEnv, validateEnv } from "./lib/env";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MongoStore from "connect-mongo";
+import helmet from "helmet";
+import cors from "cors";
 import { registerRoutes } from "./routes/index";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -29,6 +31,7 @@ declare module "express-session" {
       targetId: string;
       otp: string;
       expires: number;
+      attempts?: number;
     };
   }
 }
@@ -76,6 +79,27 @@ async function startServer() {
     await connectDB();
     log("✅ MongoDB Connected.");
 
+    // ──── Security Headers ────
+    app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:"],
+          connectSrc: ["'self'"],
+        }
+      }
+    }));
+
+    // ──── CORS ────
+    app.use(cors({
+      origin: env.NODE_ENV === "production"
+        ? "https://knowledge-vault-production.up.railway.app"
+        : `http://localhost:${env.PORT || 5000}`,
+      credentials: true,
+    }));
+
     // ──── Session & Middleware ────
     // Only registered AFTER validation is successful
     app.use(
@@ -98,7 +122,7 @@ async function startServer() {
       })
     );
 
-    app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
+    app.use(express.json({ limit: '2mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
     app.use(express.urlencoded({ extended: false }));
 
     app.use((req, res, next) => {

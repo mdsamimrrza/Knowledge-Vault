@@ -15,7 +15,7 @@ function getTransporter() {
         pass: env.EMAIL_PASS,
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: process.env.NODE_ENV === "production"
       }
     });
 

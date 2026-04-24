@@ -1,10 +1,21 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { storage } from "../../storage";
 import { registerSchema, loginSchema, userSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
+import { randomInt } from "crypto";
+import rateLimit from "express-rate-limit";
 import { UserModel } from "../../models";
 import { sendOTP, isValidEmailDomain } from "../../lib/email";
 import { getEnv } from "../../lib/env";
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many login attempts. Please wait 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const router = Router();
 
@@ -32,7 +43,7 @@ router.post("/register", async (req, res) => {
 });
 
 // ──── Auth (Login) ────
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   try {
     const data = loginSchema.parse(req.body);
     const user = await storage.getUserByEmail(data.email);
@@ -101,7 +112,7 @@ router.post("/forgot-password", async (req, res) => {
       return res.status(429).json({ message: `Please wait ${remaining} seconds before requesting another code.` });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = randomInt(100000, 999999).toString();
     const expires = new Date(Date.now() + 15 * 60 * 1000);
 
     await UserModel.findOneAndUpdate(
@@ -157,6 +168,15 @@ router.post("/reset-password", async (req, res) => {
       $unset: { resetPasswordOTP: "", resetPasswordExpires: "" } 
     }
   );
+
+  // ✅ SECURITY FIX: Invalidate all existing sessions after password reset
+  try {
+    await mongoose.connection.collection('sessions').deleteMany({
+      'session.userId': user._id.toString()
+    });
+  } catch (err) {
+    console.error("Failed to invalidate sessions on password reset:", err);
+  }
 
   res.json({ message: "Password reset successfully." });
 });

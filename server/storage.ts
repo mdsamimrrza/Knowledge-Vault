@@ -86,7 +86,11 @@ export class MongoStorage implements IStorage {
 
     if (params?.q) {
       // Use MongoDB text index for efficient full-text search
-      query.$text = { $search: params.q };
+      // ✅ SECURITY FIX: Sanitize query to prevent NoSQL injection
+      const sanitizedQuery = (params.q || "").replace(/[\$\{\}]/g, "").trim().slice(0, 200);
+      if (sanitizedQuery) {
+        query.$text = { $search: sanitizedQuery };
+      }
     }
     if (params?.tag) {
       query.tags = params.tag;

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { storage } from "../../storage";
 import { z } from "zod";
+import { randomInt } from "crypto";
 import { requireAdmin } from "../../middleware/auth";
 import { sendOTP } from "../../lib/email";
 import { getEnv } from "../../lib/env";
@@ -125,7 +126,7 @@ router.post("/users/:id/verify-master-key", async (req, res) => {
  */
 router.post("/users/:id/request-otp", async (req, res) => {
   const adminUser = await storage.getUserById(req.session.userId!);
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = randomInt(100000, 999999).toString();
   const actionType = req.body.actionType || "DEMOTE";
   const targetId = req.params.id;
 
@@ -181,6 +182,14 @@ const confirmActionHandler = async (req: any, res: any, expectedType?: string) =
 
   if (!pending || pending.targetId !== id) {
     return res.status(400).json({ message: "No pending action found" });
+  }
+
+  // ✅ SECURITY FIX: OTP brute-force protection
+  if (!pending.attempts) pending.attempts = 0;
+  pending.attempts++;
+  if (pending.attempts > 5) {
+    delete req.session.pendingAction;
+    return res.status(429).json({ message: "Too many failed attempts. Please restart the authorization flow." });
   }
 
   // ✅ SECURITY FIX: Enforce that the URL endpoint matches the actual pending action type.
