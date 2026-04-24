@@ -1,30 +1,35 @@
 import nodemailer from "nodemailer";
 import { getEnv } from "./env";
 
-const env = getEnv();
+let _transporter: nodemailer.Transporter | null = null;
 
-// ──── Email Configuration ────
-const transporter = nodemailer.createTransport({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  secure: env.SMTP_SECURE,
-  auth: {
-    user: env.EMAIL_USER,
-    pass: env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+function getTransporter() {
+  if (!_transporter) {
+    const env = getEnv();
+    _transporter = nodemailer.createTransport({
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      secure: env.SMTP_SECURE,
+      auth: {
+        user: env.EMAIL_USER,
+        pass: env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
 
-// Verify connection on startup
-transporter.verify((error) => {
-  if (error) {
-    console.error("❌ NODEMAILER CONNECTION FAILED:", error.message);
-  } else {
-    console.log("✅ Email system ready — sending from:", env.EMAIL_USER);
+    // Verify connection on first use
+    _transporter.verify((error) => {
+      if (error) {
+        console.error("❌ NODEMAILER CONNECTION FAILED:", error.message);
+      } else {
+        console.log("✅ Email system ready — sending from:", env.EMAIL_USER);
+      }
+    });
   }
-});
+  return _transporter;
+}
 
 /**
  * Validates if an email domain exists using DNS MX records
@@ -50,10 +55,13 @@ export async function isValidEmailDomain(email: string): Promise<boolean> {
  * Sends a Security OTP via Email
  */
 export async function sendOTP(email: string, otp: string, subject = "Security Code Verification") {
+  const env = getEnv();
   if (!env.EMAIL_USER || !env.EMAIL_PASS) {
     // Mock delivery for non-production/testing
     return true;
   }
+
+  const transporter = getTransporter();
 
   try {
     console.log(`📧 Attempting to send OTP to: ${email}...`);

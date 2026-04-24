@@ -43,7 +43,10 @@ export function validateEnv(): Env {
       console.error(`  • ${issue.path.join(".")}: ${issue.message}`);
     });
     console.error("\nFix the above .env values before starting the server.\n");
-    process.exit(1);
+    // We don't exit(1) immediately to allow the server to bind to a port 
+    // and show these logs in cloud environments (Railway).
+    // Instead, we throw an error which will be caught by startServer.
+    throw new Error("Environment validation failed");
   }
 
   _env = result.data;

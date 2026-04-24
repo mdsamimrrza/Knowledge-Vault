@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { getEnv, validateEnv } from "./lib/env";
-validateEnv();
 import crypto from "crypto";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
@@ -15,7 +14,7 @@ const httpServer = createServer(app);
 
 // 1. IRONCLAD HEALTHCHECK (Registered immediately)
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ status: "ok", mode: getEnv().NODE_ENV });
+  res.status(200).json({ status: "ok", mode: process.env.NODE_ENV || 'production' });
 });
 
 // Necessary for Railway/Cloud deployments
@@ -108,6 +107,8 @@ app.use((req, res, next) => {
 // ──── Initialization Logic ────
 async function startServer() {
   try {
+    log("🛡️ Validating Environment...");
+    validateEnv();
     log("📡 Connecting to MongoDB...");
     await connectDB();
     log("✅ MongoDB Connected.");
