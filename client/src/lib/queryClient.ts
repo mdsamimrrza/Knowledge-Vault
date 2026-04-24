@@ -23,6 +23,7 @@ export async function apiRequest(
     method,
     headers: data ? { "Content-Type": "application/json" } : undefined,
     body: data ? JSON.stringify(data) : undefined,
+    credentials: "include",
   });
 
   if (!res.ok) {

@@ -26,24 +26,24 @@ declare module "http" {
 }
 
 // ──── Session & Middleware ────
-const sessionSecret = process.env.SESSION_SECRET || (() => {
-  console.warn("⚠️  SESSION_SECRET not set — generating a random secret.");
-  return crypto.randomBytes(32).toString("hex");
-})();
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && process.env.NODE_ENV === "production") {
+  throw new Error("❌ FATAL: SESSION_SECRET environment variable is required in production!");
+}
 
 app.use(
   session({
-    secret: sessionSecret,
+    secret: sessionSecret || "dev-secret-only",
     resave: false,
     saveUninitialized: false,
+    name: "kv_session", // Custom name to avoid generic fingerprints
     store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI || "mongodb://localhost:27017/knowledge-vault",
-      ttl: 7 * 24 * 60 * 60,
+      mongoUrl: process.env.MONGODB_URI,
+      ttl: 14 * 24 * 60 * 60, // 14 days
       autoRemove: 'native',
-      crypto: { secret: sessionSecret }
     }),
     cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 14 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
