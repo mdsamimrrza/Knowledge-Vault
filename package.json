@@ -1,5 +1,5 @@
 {
-  "name": "knowledge-vault",
+  "name": "rest-express",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -8,8 +8,6 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "script:promote-admin": "tsx scripts/promote-admin.ts",
-    "script:cleanup-user": "tsx scripts/cleanup-test-user.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
