@@ -141,9 +141,18 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // Start the server
+  // Start the server immediately so healthchecks pass
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(port, "0.0.0.0", () => {
     log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${port}`);
   });
+
+  // Dedicated Healthcheck for Railway
+  app.get("/api/health", (_req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Then connect to DB and register routes
+  await connectDB();
+  await registerRoutes(httpServer, app);
 })();
