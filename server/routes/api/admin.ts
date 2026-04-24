@@ -16,9 +16,15 @@ router.use(requireAdmin);
 router.get("/stats", async (_req, res) => {
   const users = await storage.getUsers();
   const articles = await storage.getArticles();
+  
+  const adminUsers = users.filter(u => u.isAdmin).length;
+  const bannedUsers = users.filter(u => u.isBanned).length;
+
   res.json({
     totalUsers: users.length,
-    totalArticles: articles.length
+    totalArticles: articles.length,
+    adminUsers,
+    bannedUsers
   });
 });
 
@@ -35,8 +41,22 @@ router.get("/users", async (_req, res) => {
  */
 router.patch("/users/:id", async (req, res) => {
   const id = req.params.id;
-  const updates = req.body;
-  
+
+  // ✅ SECURITY FIX: Whitelist allowed fields to prevent mass-assignment.
+  // An attacker could otherwise send { hashedPassword: "x", otpSecret: "y" }
+  // and bypass OTP entirely by writing directly to the DB.
+  const ALLOWED_FIELDS = ['isAdmin', 'isBanned', 'otpEnabled'];
+  const updates: Record<string, any> = {};
+  for (const field of ALLOWED_FIELDS) {
+    if (req.body[field] !== undefined) {
+      updates[field] = req.body[field];
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ message: "No valid fields to update." });
+  }
+
   const targetUser = await storage.getUserById(id);
   const isDemotingAdmin = updates.isAdmin === false && targetUser?.isAdmin;
   const isPromotingUser = updates.isAdmin === true && !targetUser?.isAdmin;
@@ -73,6 +93,7 @@ router.patch("/users/:id", async (req, res) => {
     });
   }
 
+  // For non-high-risk actions (e.g., unban), apply directly
   const user = await storage.updateUserStatus(id, updates);
   if (!user) return res.status(404).json({ message: "User not found" });
   res.json(user);
@@ -135,15 +156,38 @@ router.post("/users/:id/request-otp", async (req, res) => {
 });
 
 /**
- * Confirm Action with OTP
+ * Delete User (Trigger Verification)
  */
-router.post("/users/:id/confirm-demote", async (req, res) => {
-  const { code } = z.object({ code: z.string() }).parse(req.body);
+router.delete("/users/:id", async (req, res) => {
+  const id = req.params.id;
+  const targetUser = await storage.getUserById(id);
+  if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+  // Always require OTP for deletion
+  return res.status(403).json({
+    message: "EMAIL_OTP_REQUIRED",
+    targetId: id,
+    actionType: "DELETE"
+  });
+});
+
+/**
+ * Confirm Action with OTP (Consolidated Handler)
+ */
+const confirmActionHandler = async (req: any, res: any, expectedType?: string) => {
+  const { code } = z.object({ code: z.string().optional() }).parse(req.body);
   const id = req.params.id;
   const pending = req.session.pendingAction;
 
   if (!pending || pending.targetId !== id) {
     return res.status(400).json({ message: "No pending action found" });
+  }
+
+  // ✅ SECURITY FIX: Enforce that the URL endpoint matches the actual pending action type.
+  // Without this, an attacker could confirm a DELETE via /confirm-ban
+  // if they have a pending BAN session from another user's action.
+  if (expectedType && pending.type !== expectedType) {
+    return res.status(400).json({ message: "Action type mismatch. Please restart the authorization flow." });
   }
 
   if (pending.otp !== code) {
@@ -154,6 +198,14 @@ router.post("/users/:id/confirm-demote", async (req, res) => {
     return res.status(400).json({ message: "OTP has expired" });
   }
 
+  if (pending.type === 'DELETE') {
+    const success = await storage.deleteUser(id);
+    delete req.session.pendingAction;
+    delete req.session.masterKeyVerifiedFor;
+    if (!success) return res.status(404).json({ message: "User not found" });
+    return res.json({ message: "User deleted successfully" });
+  }
+
   let updates = {};
   if (pending.type === 'DEMOTE' || pending.type === 'SELF_DEMOTE') updates = { isAdmin: false };
   if (pending.type === 'PROMOTE') updates = { isAdmin: true };
@@ -161,9 +213,15 @@ router.post("/users/:id/confirm-demote", async (req, res) => {
 
   const user = await storage.updateUserStatus(id, updates);
   delete req.session.pendingAction;
-  delete req.session.masterKeyVerifiedFor; // Clear verification after use
+  delete req.session.masterKeyVerifiedFor;
   
   res.json(user);
-});
+};
+
+router.post("/users/:id/confirm-demote",    (req, res) => confirmActionHandler(req, res, 'DEMOTE'));
+router.post("/users/:id/confirm-ban",        (req, res) => confirmActionHandler(req, res, 'BAN'));
+router.post("/users/:id/confirm-promote",    (req, res) => confirmActionHandler(req, res, 'PROMOTE'));
+router.post("/users/:id/confirm-delete",     (req, res) => confirmActionHandler(req, res, 'DELETE'));
+router.post("/users/:id/confirm-self-demote",(req, res) => confirmActionHandler(req, res, 'SELF_DEMOTE'));
 
 export default router;

@@ -40,6 +40,11 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // ✅ SECURITY FIX: Check ban status before creating session
+    if (user.isBanned) {
+      return res.status(403).json({ message: "Your account has been suspended. Please contact an administrator." });
+    }
+
     req.session.userId = user.id;
     res.json(user);
   } catch (err: any) {

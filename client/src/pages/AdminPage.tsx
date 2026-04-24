@@ -1,4 +1,6 @@
+import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
+
 import { Sidebar } from "@/components/Sidebar";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { User, Article } from "@shared/schema";
@@ -25,6 +27,16 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -32,6 +44,7 @@ import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useUser } from "@/hooks/use-auth";
 import { useEffect } from "react";
+
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -95,6 +108,18 @@ export default function AdminPage() {
   const [pendingActionType, setPendingActionType] = useState<"DEMOTE" | "BAN" | "PROMOTE" | "DELETE" | "SELF_DEMOTE">("DEMOTE");
   const [selfDemoteStep, setSelfDemoteStep] = useState<"KEY" | "WAIT_OTP" | "OTP">("KEY");
   const [masterKey, setMasterKey] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant?: "default" | "destructive";
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
 
   const verifyKeyMutation = useMutation({
     mutationFn: async ({ id, key }: { id: string; key: string }) => {
@@ -142,7 +167,25 @@ export default function AdminPage() {
       setSelfDemoteStep("KEY");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
-      toast({ title: "Admin Demoted", description: "The administrative rights have been successfully revoked." });
+      
+      let title = "Action Completed";
+      let desc = "The administrative action was successful.";
+      
+      if (pendingActionType === "BAN") {
+        title = "User Banned";
+        desc = "The user has been successfully suspended.";
+      } else if (pendingActionType === "PROMOTE") {
+        title = "Admin Promoted";
+        desc = "The user now has administrative privileges.";
+      } else if (pendingActionType === "DELETE") {
+        title = "User Deleted";
+        desc = "The user account has been permanently removed.";
+      } else if (pendingActionType === "DEMOTE" || pendingActionType === "SELF_DEMOTE") {
+        title = "Admin Demoted";
+        desc = "The administrative rights have been successfully revoked.";
+      }
+
+      toast({ title, description: desc });
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Verification Failed", description: error.message });
@@ -323,6 +366,8 @@ export default function AdminPage() {
                               size="sm"
                               className={u.isAdmin ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10" : "text-green-500 hover:text-green-600 hover:bg-green-500/10"}
                               onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isAdmin: !u.isAdmin } })}
+                              disabled={u.isBanned && !u.isAdmin}
+                              title={u.isBanned && !u.isAdmin ? "Unban user first to promote" : ""}
                             >
                               {u.isAdmin ? <HistoryIcon className="w-3.5 h-3.5 mr-1" /> : <ShieldCheck className="w-3.5 h-3.5 mr-1" />}
                               {u.isAdmin ? "Demote" : "Promote"}
@@ -331,7 +376,15 @@ export default function AdminPage() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive hover:bg-destructive/10"
-                              onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isBanned: !u.isBanned } })}
+                              onClick={() => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: u.isBanned ? 'Unban User' : 'Ban User',
+                                  description: `Are you sure you want to ${u.isBanned ? 'unban' : 'ban'} ${u.username}? This will change their system access immediately.`,
+                                  onConfirm: () => updateUserMutation.mutate({ id: u.id, updates: { isBanned: !u.isBanned } }),
+                                  variant: "destructive"
+                                });
+                              }}
                               disabled={u.id === user?.id}
                             >
                               <Ban className="w-3.5 h-3.5 mr-1" />
@@ -341,7 +394,15 @@ export default function AdminPage() {
                               variant="ghost"
                               size="sm"
                               className="text-destructive hover:bg-destructive/10"
-                              onClick={() => deleteUserMutation.mutate(u.id)}
+                              onClick={() => {
+                                setConfirmDialog({
+                                  isOpen: true,
+                                  title: 'Permanently Delete User',
+                                  description: `ARE YOU SURE? This will permanently delete ${u.username}'s account. This action cannot be undone.`,
+                                  onConfirm: () => deleteUserMutation.mutate(u.id),
+                                  variant: "destructive"
+                                });
+                              }}
                               disabled={u.id === user?.id}
                             >
                               <Trash2 className="w-3.5 h-3.5 mr-1" />
@@ -390,7 +451,8 @@ export default function AdminPage() {
                           size="icon"
                           className={`w-10 h-10 rounded-xl ${u.isAdmin ? "text-amber-500 bg-amber-500/5" : "text-green-500 bg-green-500/5"}`}
                           onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isAdmin: !u.isAdmin } })}
-                          title={u.isAdmin ? "Demote" : "Promote"}
+                          disabled={u.isBanned && !u.isAdmin}
+                          title={u.isAdmin ? "Demote" : u.isBanned ? "Unban to promote" : "Promote"}
                         >
                           {u.isAdmin ? <HistoryIcon className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
                         </Button>
@@ -398,7 +460,15 @@ export default function AdminPage() {
                           variant="ghost"
                           size="icon"
                           className="w-10 h-10 rounded-xl text-destructive bg-destructive/5"
-                          onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isBanned: !u.isBanned } })}
+                          onClick={() => {
+                            setConfirmDialog({
+                              isOpen: true,
+                              title: u.isBanned ? 'Unban User' : 'Ban User',
+                              description: `Are you sure you want to ${u.isBanned ? 'unban' : 'ban'} ${u.username}?`,
+                              onConfirm: () => updateUserMutation.mutate({ id: u.id, updates: { isBanned: !u.isBanned } }),
+                              variant: "destructive"
+                            });
+                          }}
                           disabled={u.id === user?.id}
                           title={u.isBanned ? "Unban" : "Ban User"}
                         >
@@ -410,7 +480,15 @@ export default function AdminPage() {
                         variant="ghost"
                         size="icon"
                         className="w-10 h-10 rounded-xl text-destructive bg-destructive/5"
-                        onClick={() => deleteUserMutation.mutate(u.id)}
+                        onClick={() => {
+                          setConfirmDialog({
+                            isOpen: true,
+                            title: 'Permanently Delete User',
+                            description: `Delete ${u.username}? This action cannot be undone.`,
+                            onConfirm: () => deleteUserMutation.mutate(u.id),
+                            variant: "destructive"
+                          });
+                        }}
                         disabled={u.id === user?.id}
                         title="Delete User"
                       >
@@ -516,6 +594,38 @@ export default function AdminPage() {
           </Card>
         </div>
       )}
+
+      {/* Proper Confirmation Dialog */}
+      <AlertDialog 
+        open={confirmDialog.isOpen} 
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, isOpen: open }))}
+      >
+        <AlertDialogContent className="glass-card border-white/10 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-display font-bold flex items-center gap-2">
+              <ShieldAlert className={cn("w-6 h-6", confirmDialog.variant === "destructive" ? "text-destructive" : "text-primary")} />
+              {confirmDialog.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base text-muted-foreground pt-2">
+              {confirmDialog.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 sm:gap-0">
+            <AlertDialogCancel className="rounded-xl h-11 bg-white/5 border-white/10 hover:bg-white/10">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDialog.onConfirm}
+              className={cn(
+                "rounded-xl h-11 font-bold",
+                confirmDialog.variant === "destructive" 
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" 
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+            >
+              Confirm Action
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
