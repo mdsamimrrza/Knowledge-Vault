@@ -1,4 +1,4 @@
-# Maintenance Scripts
+﻿# Maintenance Scripts
 
 ## promote-admin.ts
 Promotes an existing user to Super Admin role.

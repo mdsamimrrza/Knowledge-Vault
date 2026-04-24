@@ -1,5 +1,5 @@
 {
-  "name": "rest-express",
+  "name": "knowledge-vault",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -10,7 +10,9 @@
     "check": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "script:promote-admin": "tsx scripts/promote-admin.ts",
+    "script:cleanup-user": "tsx scripts/cleanup-test-user.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
