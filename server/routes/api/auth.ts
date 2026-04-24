@@ -3,7 +3,8 @@ import { storage } from "../../storage";
 import { registerSchema, loginSchema, userSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { UserModel } from "../../models";
-import { sendOTP, validateEmailDomain } from "../../lib/email";
+import { sendOTP, isValidEmailDomain } from "../../lib/email";
+import { getEnv } from "../../lib/env";
 
 const router = Router();
 
@@ -67,7 +68,7 @@ router.post("/forgot-password", async (req, res) => {
     }
 
     // 2. DNS Validation: Check if the domain actually exists to prevent bounces
-    if (!(await validateEmailDomain(normalizedEmail))) {
+    if (!(await isValidEmailDomain(normalizedEmail))) {
       return res.status(400).json({ message: "Email domain not found. Please check your email spelling to avoid bounces." });
     }
 
@@ -77,12 +78,13 @@ router.post("/forgot-password", async (req, res) => {
     }
 
     // 3. Special check for Super Admin: Require Master Key
-    const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
+    const env = getEnv();
+    const superAdminEmail = (env.SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
     if (normalizedEmail === superAdminEmail && superAdminEmail !== "") {
       if (!masterKey) {
         return res.status(403).json({ message: "SECRET_KEY_REQUIRED", email: email });
       }
-      if (masterKey !== process.env.ADMIN_SECRET_KEY) {
+      if (masterKey !== env.ADMIN_SECRET_KEY) {
         return res.status(401).json({ message: "Invalid Master Key. Authorization denied." });
       }
     }

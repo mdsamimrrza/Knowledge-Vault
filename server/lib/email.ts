@@ -1,13 +1,16 @@
 import nodemailer from "nodemailer";
+import { getEnv } from "./env";
+
+const env = getEnv();
 
 // ──── Email Configuration ────
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
+  secure: env.SMTP_SECURE,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: env.EMAIL_USER,
+    pass: env.EMAIL_PASS,
   },
   tls: {
     rejectUnauthorized: false
@@ -19,19 +22,19 @@ transporter.verify((error) => {
   if (error) {
     console.error("❌ NODEMAILER CONNECTION FAILED:", error.message);
   } else {
-    console.log("✅ Email system ready — sending from:", process.env.EMAIL_USER);
+    console.log("✅ Email system ready — sending from:", env.EMAIL_USER);
   }
 });
 
 /**
  * Validates if an email domain exists using DNS MX records
  */
-export async function validateEmailDomain(email: string): Promise<boolean> {
+export async function isValidEmailDomain(email: string): Promise<boolean> {
   const normalizedEmail = email.toLowerCase().trim();
   const domain = normalizedEmail.split('@')[1];
   
   // Hard-block known test/fake domains
-  const blacklistedDomains = ['test.com', 'example.com', 'fake.com', 'invalid.com'];
+  const blacklistedDomains = ['test.com', 'example.com', 'fake.com', 'invalid.com', 'mailinator.com', 'guerrillamail.com', 'throwaway.email', 'tempmail.com'];
   if (blacklistedDomains.some(d => domain.endsWith(d))) return false;
 
   try {
@@ -47,7 +50,7 @@ export async function validateEmailDomain(email: string): Promise<boolean> {
  * Sends a Security OTP via Email
  */
 export async function sendOTP(email: string, otp: string, subject = "Security Code Verification") {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  if (!env.EMAIL_USER || !env.EMAIL_PASS) {
     // Mock delivery for non-production/testing
     return true;
   }
@@ -55,7 +58,7 @@ export async function sendOTP(email: string, otp: string, subject = "Security Co
   try {
     console.log(`📧 Attempting to send OTP to: ${email}...`);
     const info = await transporter.sendMail({
-      from: `"Knowledge Vault Security" <${process.env.EMAIL_USER}>`,
+      from: `"Knowledge Vault Security" <${env.EMAIL_USER}>`,
       to: email,
       subject: subject,
       headers: {

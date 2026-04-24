@@ -7,21 +7,7 @@ import type { Components } from "react-markdown";
 import { LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Extract all [[Title]] wiki-link titles from markdown content */
-function extractWikiLinkTitles(content: string): string[] {
-  const matches = content.match(/\[\[([^\]]+)\]\]/g);
-  if (!matches) return [];
-  const titles = matches.map(m => m.slice(2, -2).trim());
-  return Array.from(new Set(titles)); // dedupe
-}
-
-/** Pre-process markdown: replace [[Title]] with a placeholder link that ReactMarkdown can parse */
-function preProcessWikiLinks(content: string): string {
-  return content.replace(
-    /\[\[([^\]]+)\]\]/g,
-    (_match, title: string) => `[${title.trim()}](wikilink://${encodeURIComponent(title.trim())})`
-  );
-}
+import { extractWikiLinkTitles, preProcessWikiLinks } from "@shared/wiki-links";
 
 /** Hook to batch-resolve wiki-link titles → article IDs */
 function useResolveWikiLinks(content: string) {

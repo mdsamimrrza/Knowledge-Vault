@@ -3,6 +3,7 @@ import { storage } from "../../storage";
 import { z } from "zod";
 import { requireAdmin } from "../../middleware/auth";
 import { sendOTP } from "../../lib/email";
+import { getEnv } from "../../lib/env";
 
 const router = Router();
 
@@ -42,7 +43,8 @@ router.patch("/users/:id", async (req, res) => {
   const isBanningUser = updates.isBanned === true && !targetUser?.isBanned;
 
   // Zero-Trust Check for Super Admin
-  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
+  const env = getEnv();
+  const superAdminEmail = (env.SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
   const currentAdmin = await storage.getUserById(req.session.userId!);
 
   if (isDemotingAdmin || isPromotingUser) {
@@ -84,12 +86,12 @@ router.post("/users/:id/verify-master-key", async (req, res) => {
   const id = req.params.id;
   const adminUser = await storage.getUserById(req.session.userId!);
 
-  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
+  const superAdminEmail = (getEnv().SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
   if (adminUser?.email !== superAdminEmail) {
     return res.status(403).json({ message: "Action restricted to Super Admin." });
   }
 
-  if (key !== process.env.ADMIN_SECRET_KEY) {
+  if (key !== getEnv().ADMIN_SECRET_KEY) {
     return res.status(401).json({ message: "Invalid Secret Master Key." });
   }
 
@@ -106,7 +108,7 @@ router.post("/users/:id/request-otp", async (req, res) => {
   const actionType = req.body.actionType || "DEMOTE";
   const targetId = req.params.id;
 
-  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
+  const superAdminEmail = (getEnv().SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
 
   // Verification Gate
   if ((actionType === "PROMOTE" || actionType === "SELF_DEMOTE" || actionType === "DEMOTE") && 

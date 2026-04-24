@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { getEnv, validateEnv } from "./lib/env";
+validateEnv();
 import crypto from "crypto";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
@@ -13,11 +15,24 @@ const httpServer = createServer(app);
 
 // 1. IRONCLAD HEALTHCHECK (Registered immediately)
 app.get("/healthz", (_req, res) => {
-  res.status(200).json({ status: "ok", mode: process.env.NODE_ENV });
+  res.status(200).json({ status: "ok", mode: getEnv().NODE_ENV });
 });
 
 // Necessary for Railway/Cloud deployments
 app.set("trust proxy", 1);
+
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+    masterKeyVerifiedFor?: string;
+    pendingAction?: {
+      type: "DEMOTE" | "BAN" | "PROMOTE" | "SELF_DEMOTE" | "DELETE";
+      targetId: string;
+      otp: string;
+      expires: number;
+    };
+  }
+}
 
 declare module "http" {
   interface IncomingMessage {
@@ -25,20 +40,37 @@ declare module "http" {
   }
 }
 
-// ──── Session & Middleware ────
-const sessionSecret = process.env.SESSION_SECRET;
-if (!sessionSecret && process.env.NODE_ENV === "production") {
-  throw new Error("❌ FATAL: SESSION_SECRET environment variable is required in production!");
+declare global {
+  namespace Express {
+    interface Request {
+      isAuthenticated(): boolean;
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        isAdmin: boolean;
+      };
+    }
+    interface User {
+      id: string;
+      email: string;
+      role: string;
+      isAdmin: boolean;
+    }
+  }
 }
+
+// ──── Session & Middleware ────
+const env = getEnv();
 
 app.use(
   session({
-    secret: sessionSecret || "dev-secret-only",
+    secret: env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     name: "kv_session", // Custom name to avoid generic fingerprints
     store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI,
+      mongoUrl: env.MONGODB_URI,
       ttl: 14 * 24 * 60 * 60, // 14 days
       autoRemove: 'native',
     }),
@@ -46,7 +78,7 @@ app.use(
       maxAge: 14 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: env.NODE_ENV === "production",
     },
   })
 );
@@ -83,7 +115,7 @@ async function startServer() {
     log("🛣️ Registering routes...");
     await registerRoutes(httpServer, app);
 
-    if (process.env.NODE_ENV === "production") {
+    if (getEnv().NODE_ENV === "production") {
       log("📦 Serving static files (Production)");
       serveStatic(app);
     } else {
@@ -107,7 +139,7 @@ async function startServer() {
 }
 
 // 2. BOOTSTRAP
-const port = parseInt(process.env.PORT || "5000", 10);
+const port = getEnv().PORT;
 
 // Call the async initialization
 startServer();

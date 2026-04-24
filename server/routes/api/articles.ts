@@ -57,12 +57,12 @@ router.get("/slug/:slug", async (req, res) => {
 // ──── Versions ────
 
 router.get("/:id/versions", requireAuth, async (req, res) => {
-  const versions = await storage.getArticleVersions(req.params.id);
+  const versions = await storage.getArticleVersions(req.params.id as string);
   res.json(versions);
 });
 
 router.post("/:id/versions/:versionId/restore", requireAdmin, async (req, res) => {
-  const article = await storage.restoreVersion(req.params.id, req.params.versionId, req.session.userId);
+  const article = await storage.restoreVersion(req.params.id as string, req.params.versionId as string, req.session.userId);
   if (!article) return res.status(404).json({ message: "Version or article not found" });
   res.json(article);
 });
@@ -76,13 +76,13 @@ router.post("/", requireAdmin, async (req, res) => {
 });
 
 router.patch("/:id", requireAdmin, async (req, res) => {
-  const article = await storage.updateArticle(req.params.id, req.body, req.session.userId);
+  const article = await storage.updateArticle(req.params.id as string, req.body, req.session.userId);
   if (!article) return res.status(404).json({ message: "Article not found" });
   res.json(article);
 });
 
 router.delete("/:id", requireAdmin, async (req, res) => {
-  await storage.deleteArticle(req.params.id);
+  await storage.deleteArticle(req.params.id as string);
   res.sendStatus(204);
 });
 
