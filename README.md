@@ -1,5 +1,7 @@
 # Knowledge Vault — Secure Personal Wiki & Knowledge Base
 
+![Knowledge Vault Banner](client/public/banner.png)
+
 A high-security, full-stack personal wiki application for creating, organizing, and interlinking markdown articles. Built with a focus on **Zero-Trust Security**, **Modular Architecture**, and **Anti-Spam Email Protection**.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
