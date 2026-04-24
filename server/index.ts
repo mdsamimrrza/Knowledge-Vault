@@ -11,10 +11,9 @@ import { connectDB } from "./db";
 const app = express();
 const httpServer = createServer(app);
 
-// 1. DIAGNOSTIC HEALTHCHECK (Completely unique path)
+// 1. IRONCLAD HEALTHCHECK (Registered immediately)
 app.get("/healthz", (_req, res) => {
-  console.log("🔔 HEALTHCHECK HIT!");
-  res.status(200).send("OK-DIAGNOSTIC");
+  res.status(200).json({ status: "ok", mode: process.env.NODE_ENV });
 });
 
 // Necessary for Railway/Cloud deployments
@@ -67,23 +66,16 @@ app.use((req, res, next) => {
   const path = req.path;
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
+    if (path.startsWith("/api") && path !== "/api/health") {
       log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
   next();
 });
 
-// ──── Start Up ────
-(async () => {
+// ──── Initialization Logic ────
+async function startServer() {
   try {
-    const port = parseInt(process.env.PORT || "5000", 10);
-    
-    // Start Listening
-    httpServer.listen(port, "0.0.0.0", () => {
-      log(`🚀 Server listening on 0.0.0.0:${port}`);
-    });
-
     log("📡 Connecting to MongoDB...");
     await connectDB();
     log("✅ MongoDB Connected.");
@@ -109,6 +101,21 @@ app.use((req, res, next) => {
 
   } catch (error) {
     console.error("❌ FATAL STARTUP ERROR:", error);
-    process.exit(1);
+    // In production, we don't want to exit immediately if the DB is down
+    // so that the healthcheck can still respond and show us the error.
   }
-})();
+}
+
+// 2. BOOTSTRAP
+const port = parseInt(process.env.PORT || "5000", 10);
+
+// Call the async initialization
+startServer();
+
+// Start listening IMMEDIATELY and SYNCHRONOUSLY
+httpServer.listen(port, "0.0.0.0", () => {
+  console.log("=========================================");
+  console.log(`🚀 SERVER IS LIVE ON PORT: ${port}`);
+  console.log(`🔗 HEALTHCHECK: http://0.0.0.0:${port}/healthz`);
+  console.log("=========================================");
+});
