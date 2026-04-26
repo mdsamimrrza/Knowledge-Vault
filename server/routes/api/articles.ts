@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { storage } from "../../storage";
 import { insertArticleSchema } from "@shared/schema";
-import { requireAuth, requireAdmin } from "../../middleware/auth";
+import { requireAuth } from "../../middleware/auth";
 
 const router = Router();
 
