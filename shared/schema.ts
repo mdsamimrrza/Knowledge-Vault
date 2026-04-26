@@ -18,6 +18,7 @@ export const userSchema = z.object({
   email: z.string(),
   isAdmin: z.boolean().default(false),
   isBanned: z.boolean().default(false),
+  plan: z.enum(["free", "premium"]).default("free"),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

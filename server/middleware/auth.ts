@@ -43,6 +43,7 @@ export function requireRole(role: string) {
  * Middleware to require a logged-in user session (legacy support)
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  console.log(`[requireAuth] Session userId: ${req.session.userId}`);
   if (!req.session.userId) {
     res.status(401).json({ message: "You must be logged in to perform this action." });
     return;

@@ -32,6 +32,7 @@ export interface IStorage {
   addFavorite(userId: string, articleId: string): Promise<void>;
   removeFavorite(userId: string, articleId: string): Promise<void>;
   isFavorite(userId: string, articleId: string): Promise<boolean>;
+  generateSlug(title: string): Promise<string>;
 }
 
 export class MongoStorage implements IStorage {
@@ -168,7 +169,10 @@ export class MongoStorage implements IStorage {
 
   async createArticle(insertArticle: InsertArticle, authorId?: string): Promise<Article> {
     const data: any = { ...insertArticle };
-    if (data.title) data.title = data.title.trim();
+    if (data.title) {
+      data.title = data.title.trim();
+      data.slug = await this.generateSlug(data.title);
+    }
     if (authorId) data.authorId = authorId;
     const article = await ArticleModel.create(data);
     // Create initial version
@@ -185,8 +189,12 @@ export class MongoStorage implements IStorage {
 
   async updateArticle(id: string, updates: Partial<InsertArticle>, userId?: string): Promise<Article | undefined> {
     if (!isValidObjectId(id)) return undefined;
-    if (updates.title) updates.title = updates.title.trim();
-    const article = await ArticleModel.findByIdAndUpdate(id, updates, { new: true });
+    const data: any = { ...updates };
+    if (updates.title) {
+      data.title = updates.title.trim();
+      data.slug = await this.generateSlug(data.title);
+    }
+    const article = await ArticleModel.findByIdAndUpdate(id, data, { new: true });
     if (article && updates.content) {
       await VersionModel.create({
         articleId: article._id,
@@ -307,6 +315,29 @@ export class MongoStorage implements IStorage {
     if (!isValidObjectId(userId) || !isValidObjectId(articleId)) return false;
     const fav = await FavoriteModel.findOne({ userId, articleId });
     return !!fav;
+  }
+
+  async generateSlug(title: string): Promise<string> {
+    let baseSlug = title
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')     // Replace spaces with -
+      .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+      .replace(/\-\-+/g, '-');  // Replace multiple - with single -
+
+    if (!baseSlug) baseSlug = 'article';
+
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Ensure uniqueness
+    while (await ArticleModel.findOne({ slug })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    return slug;
   }
 }
 

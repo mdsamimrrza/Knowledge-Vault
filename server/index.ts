@@ -88,20 +88,23 @@ async function startServer() {
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:"],
-          connectSrc: ["'self'"],
+          connectSrc: ["'self'", "https://knowledgebase-wdt5.onrender.com"],
         }
       }
     }));
 
     // ──── CORS ────
+    const allowedOrigins = env.CORS_ORIGINS 
+      ? env.CORS_ORIGINS.split(',').map(s => s.trim())
+      : [
+          "https://knowledge-vault.onrender.com",
+          "https://knowledgebase-wdt5.onrender.com",
+          `http://localhost:${env.PORT || 5000}`,
+          "http://localhost:5173"
+        ];
+
     app.use(cors({
-      origin: env.NODE_ENV === "production"
-        ? [
-            "https://knowledge-vault-production.up.railway.app",
-            "https://knowledge-vault.up.railway.app",
-            "https://www.knowledge-vault.up.railway.app"
-          ]
-        : [`http://localhost:${env.PORT || 5000}`, "http://localhost:5173"],
+      origin: allowedOrigins,
       credentials: true,
     }));
 
@@ -180,7 +183,7 @@ async function startServer() {
 }
 
 // 2. BOOTSTRAP
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Start listening IMMEDIATELY and SYNCHRONOUSLY
 // This ensures Railway healthcheck passes Attempt #1

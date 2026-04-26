@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   hashedPassword: { type: String, required: true },
   isAdmin: { type: Boolean, default: false },
   isBanned: { type: Boolean, default: false },
+  plan: { type: String, enum: ["free", "premium"], default: "free" },
   otpSecret: { type: String },
   otpEnabled: { type: Boolean, default: false },
   resetPasswordOTP: { type: String },
@@ -34,7 +35,7 @@ const articleSchema = new mongoose.Schema({
   tags: { type: [String], default: [] },
   isPublic: { type: Boolean, default: false },
   authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  slug: { type: String, unique: true },
+  slug: { type: String, unique: true, sparse: true },
 }, {
   timestamps: true,
   toJSON: {

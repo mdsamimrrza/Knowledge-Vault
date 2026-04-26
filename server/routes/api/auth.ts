@@ -1,4 +1,5 @@
 import { Router } from "express";
+import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { storage } from "../../storage";
 import { registerSchema, loginSchema, userSchema } from "@shared/schema";
@@ -19,6 +20,19 @@ const loginLimiter = rateLimit({
 
 const router = Router();
 
+const signToken = (user: any) => {
+  const env = getEnv();
+  return jwt.sign(
+    { 
+      userId: user.id, 
+      isAdmin: user.isAdmin,
+      email: user.email 
+    }, 
+    env.JWT_SECRET || "fallback_secret", 
+    { expiresIn: "7d" }
+  );
+};
+
 // ──── Auth (Me) ────
 router.get("/me", async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: "Not authenticated" });
@@ -38,7 +52,8 @@ router.post("/register", async (req, res) => {
     req.session.userId = user.id;
     req.session.save((err) => {
       if (err) return res.status(500).json({ message: "Failed to save session" });
-      res.status(201).json(user);
+      const token = signToken(user);
+      res.status(201).json({ user, token });
     });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
@@ -62,7 +77,8 @@ router.post("/login", loginLimiter, async (req, res) => {
     req.session.userId = user.id;
     req.session.save((err) => {
       if (err) return res.status(500).json({ message: "Failed to save session" });
-      res.json(user);
+      const token = signToken(user);
+      res.json({ user, token });
     });
   } catch (err: any) {
     res.status(400).json({ message: err.message });

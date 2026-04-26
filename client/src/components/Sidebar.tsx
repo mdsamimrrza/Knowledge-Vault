@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { BookOpen, Star, Tag, Plus, Library, Menu, X, LogIn, LogOut, User, Mail, CalendarDays, Sun, Moon, Shield, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpen, Star, Tag, Plus, Library, Menu, X, LogIn, LogOut, User, Mail, CalendarDays, Sun, Moon, Shield, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useUser, useLogout } from "@/hooks/use-auth";
@@ -24,10 +24,25 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
 
   const navItems = [
     { icon: Library, label: "All Articles", href: "/", requiresAuth: false },
+    { icon: Sparkles, label: "Neural Agent", href: "/agent", isExternal: true, requiresAuth: false },
     { icon: Star, label: "Favorites", href: "/favorites", requiresAuth: true },
     { icon: Tag, label: "Tags", href: "/tags", requiresAuth: false },
     { icon: Shield, label: "Admin Panel", href: "/admin", requiresAuth: true, adminOnly: true },
   ];
+
+  // Helper to handle external or internal navigation
+  const navigateTo = (href: string, isExternal?: boolean) => {
+    if (isExternal) {
+      // In production, use the environment variable for NeuralQuery URL
+      // In dev, use localhost:5173 (standard Vite port for NQ)
+      const nqUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5173' 
+        : 'https://knowledgebase-wdt5.onrender.com';
+      window.location.href = nqUrl;
+    } else {
+      onNavigate?.();
+    }
+  };
 
   const handleLogout = async () => {
     window.location.href = "/";
@@ -86,9 +101,9 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
           })
           .map((item) => {
             const isActive = location === item.href;
-            return (
-              <Link key={item.href} href={item.href} onClick={onNavigate} className={cn(
-                "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 nav-btn group",
+            const content = (
+              <div className={cn(
+                "flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 nav-btn group w-full",
                 isActive 
                   ? "nav-btn-active" 
                   : "text-muted-foreground hover:text-primary hover:bg-primary/10",
@@ -105,6 +120,24 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
                     {isCollapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
                   </Tooltip>
                 </TooltipProvider>
+              </div>
+            );
+
+            if (item.isExternal) {
+              return (
+                <button 
+                  key={item.href} 
+                  onClick={() => navigateTo(item.href, true)}
+                  className="w-full text-left"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <Link key={item.href} href={item.href} onClick={() => navigateTo(item.href)} className="block w-full">
+                {content}
               </Link>
             );
           })}

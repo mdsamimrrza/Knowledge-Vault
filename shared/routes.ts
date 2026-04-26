@@ -29,7 +29,7 @@ export const api = {
       path: '/api/auth/register' as const,
       input: registerSchema,
       responses: {
-        201: userSchema,
+        201: z.object({ user: userSchema, token: z.string() }),
         400: errorSchemas.validation,
       },
     },
@@ -38,7 +38,7 @@ export const api = {
       path: '/api/auth/login' as const,
       input: loginSchema,
       responses: {
-        200: userSchema,
+        200: z.object({ user: userSchema, token: z.string() }),
         401: errorSchemas.unauthorized,
       },
     },

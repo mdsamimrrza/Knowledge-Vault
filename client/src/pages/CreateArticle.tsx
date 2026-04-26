@@ -28,7 +28,7 @@ export default function CreateArticle() {
       title: "Success",
       description: "Article created successfully",
     });
-    setLocation(`/article/${newArticle.id}`);
+    setLocation("/");
   };
 
   if (authLoading) {

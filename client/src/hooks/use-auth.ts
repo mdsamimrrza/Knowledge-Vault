@@ -36,7 +36,8 @@ export function useRegister() {
       }
       return api.auth.register.responses[201].parse(await res.json());
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      localStorage.setItem("admin_token", data.token);
       queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
     },
   });
@@ -60,7 +61,8 @@ export function useLogin() {
       }
       return api.auth.login.responses[200].parse(await res.json());
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      localStorage.setItem("admin_token", data.token);
       queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
       // Refetch articles to update isFavorite fields
       queryClient.invalidateQueries({ queryKey: [api.articles.list.path] });
@@ -80,6 +82,7 @@ export function useLogout() {
       if (!res.ok) throw new Error("Logout failed");
     },
     onSuccess: () => {
+      localStorage.removeItem("admin_token");
       queryClient.setQueryData([api.auth.me.path], null);
       // Refetch articles to clear isFavorite fields
       queryClient.invalidateQueries({ queryKey: [api.articles.list.path] });

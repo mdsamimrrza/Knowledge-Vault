@@ -14,6 +14,8 @@ const envSchema = z.object({
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.string().default('587').transform((v) => parseInt(v, 10)),
   SMTP_SECURE: z.string().default('false').transform((v) => v === 'true'),
+  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
+  CORS_ORIGINS: z.string().optional().default(""),
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
