@@ -20,7 +20,7 @@ app.get("/healthz", (_req, res) => {
 });
 
 // Necessary for Railway/Cloud deployments
-app.set("trust proxy", 1);
+app.set("trust proxy", true);
 
 declare module "express-session" {
   interface SessionData {
@@ -85,7 +85,8 @@ async function startServer() {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'unsafe-inline'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:"],
           connectSrc: ["'self'"],
         }

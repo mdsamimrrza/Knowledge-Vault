@@ -36,7 +36,10 @@ router.post("/register", async (req, res) => {
 
     const user = await storage.createUser(data);
     req.session.userId = user.id;
-    res.status(201).json(user);
+    req.session.save((err) => {
+      if (err) return res.status(500).json({ message: "Failed to save session" });
+      res.status(201).json(user);
+    });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
   }
@@ -57,7 +60,10 @@ router.post("/login", loginLimiter, async (req, res) => {
     }
 
     req.session.userId = user.id;
-    res.json(user);
+    req.session.save((err) => {
+      if (err) return res.status(500).json({ message: "Failed to save session" });
+      res.json(user);
+    });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
   }
