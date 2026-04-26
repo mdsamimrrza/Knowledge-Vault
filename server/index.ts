@@ -96,8 +96,12 @@ async function startServer() {
     // ──── CORS ────
     app.use(cors({
       origin: env.NODE_ENV === "production"
-        ? "https://knowledge-vault-production.up.railway.app"
-        : `http://localhost:${env.PORT || 5000}`,
+        ? [
+            "https://knowledge-vault-production.up.railway.app",
+            "https://knowledge-vault.up.railway.app",
+            "https://www.knowledge-vault.up.railway.app"
+          ]
+        : [`http://localhost:${env.PORT || 5000}`, "http://localhost:5173"],
       credentials: true,
     }));
 
@@ -117,7 +121,7 @@ async function startServer() {
         cookie: {
           maxAge: 14 * 24 * 60 * 60 * 1000,
           httpOnly: true,
-          sameSite: "lax",
+          sameSite: env.NODE_ENV === "production" ? "none" : "lax",
           secure: env.NODE_ENV === "production",
         },
       })
@@ -127,6 +131,14 @@ async function startServer() {
     app.use(express.urlencoded({ extended: false }));
 
     app.use((req, res, next) => {
+      // Prevent edge networks and browsers from caching API responses
+      if (req.path.startsWith("/api")) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.setHeader('Surrogate-Control', 'no-store');
+      }
+
       const start = Date.now();
       const path = req.path;
       res.on("finish", () => {
