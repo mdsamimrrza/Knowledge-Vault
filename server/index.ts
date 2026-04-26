@@ -88,7 +88,7 @@ async function startServer() {
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:"],
-          connectSrc: ["'self'", "https://knowledgebase-wdt5.onrender.com"],
+          connectSrc: ["'self'", "https://knowledgebase-wdt5.onrender.com", "https://knowledge-vault.up.railway.app"],
         }
       }
     }));
@@ -99,6 +99,7 @@ async function startServer() {
       : [
           "https://knowledge-vault.onrender.com",
           "https://knowledgebase-wdt5.onrender.com",
+          "https://knowledge-vault.up.railway.app",
           `http://localhost:${env.PORT || 5000}`,
           "http://localhost:5173"
         ];

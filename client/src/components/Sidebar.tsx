@@ -33,12 +33,7 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
   // Helper to handle external or internal navigation
   const navigateTo = (href: string, isExternal?: boolean) => {
     if (isExternal) {
-      // In production, use the environment variable for NeuralQuery URL
-      // In dev, use localhost:5173 (standard Vite port for NQ)
-      const nqUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5173' 
-        : 'https://knowledgebase-wdt5.onrender.com';
-      window.location.href = nqUrl;
+      window.location.href = 'https://knowledgebase-wdt5.onrender.com';
     } else {
       onNavigate?.();
     }
