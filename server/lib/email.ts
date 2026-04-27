@@ -6,6 +6,7 @@ let _transporter: nodemailer.Transporter | null = null;
 function getTransporter() {
   if (!_transporter) {
     const env = getEnv();
+    console.log(`📡 Initializing SMTP Transporter: ${env.SMTP_HOST}:${env.SMTP_PORT} (Secure: ${env.SMTP_SECURE})`);
     _transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
@@ -15,7 +16,8 @@ function getTransporter() {
         pass: env.EMAIL_PASS,
       },
       tls: {
-        rejectUnauthorized: process.env.NODE_ENV === "production"
+        // ✅ Changed to false to avoid common certificate issues in cloud/local environments
+        rejectUnauthorized: false
       }
     });
 
@@ -57,7 +59,8 @@ export async function isValidEmailDomain(email: string): Promise<boolean> {
 export async function sendOTP(email: string, otp: string, subject = "Security Code Verification") {
   const env = getEnv();
   if (!env.EMAIL_USER || !env.EMAIL_PASS) {
-    // Mock delivery for non-production/testing
+    console.warn("⚠️ EMAIL_USER or EMAIL_PASS not set. Mocking OTP delivery.");
+    console.log(`[MOCK OTP] To: ${email} | Code: ${otp} | Action: ${subject}`);
     return true;
   }
 

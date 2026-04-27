@@ -31,8 +31,13 @@ export type User = z.infer<typeof userSchema>;
 export const insertArticleSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title is too long"),
   content: z.string().min(1, "Content is required").max(100000, "Content exceeds 100k character limit"),
-  tags: z.array(z.string().max(50).regex(/^[a-zA-Z0-9\-_ ]+$/, "Tags can only contain letters, numbers, hyphens and spaces")).default([]),
-  isPublic: z.boolean().default(false),
+  tags: z.array(
+    z
+      .string()
+      .max(500, "Each tag must be 500 characters or fewer")
+      .regex(/^[a-zA-Z0-9\-_ ]+$/, "Tags can only contain letters, numbers, hyphens and spaces")
+  ).default([]),
+  isPublic: z.boolean().default(true),
 });
 
 export const articleSchema = insertArticleSchema.extend({

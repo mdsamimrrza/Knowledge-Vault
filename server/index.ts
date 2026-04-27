@@ -84,11 +84,12 @@ async function startServer() {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "blob:"],
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:"],
-          connectSrc: ["'self'", "https://knowledgebase-wdt5.onrender.com", "https://knowledge-vault.up.railway.app"],
+          connectSrc: ["'self'", "https://knowledgebase-wdt5.onrender.com", "https://knowledge-vault.up.railway.app", "ws:", "wss:"],
+          workerSrc: ["'self'", "blob:"],
         }
       }
     }));
@@ -157,15 +158,6 @@ async function startServer() {
     log("🛣️ Registering routes...");
     await registerRoutes(httpServer, app);
 
-    if (env.NODE_ENV === "production") {
-      log("📦 Serving static files (Production)");
-      serveStatic(app);
-    } else {
-      log("🛠️ Setting up Vite (Development)");
-      const { setupVite } = await import("./vite");
-      await setupVite(httpServer, app);
-    }
-
     // Error handler
     app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
@@ -183,16 +175,34 @@ async function startServer() {
   }
 }
 
+async function setupFrontendRoutes() {
+  if (process.env.NODE_ENV === "production") {
+    log("📦 Serving static files (Production)");
+    serveStatic(app);
+    return;
+  }
+
+  log("🛠️ Setting up Vite (Development)");
+  const { setupVite } = await import("./vite");
+  await setupVite(httpServer, app);
+}
+
 // 2. BOOTSTRAP
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Start listening IMMEDIATELY and SYNCHRONOUSLY
 // This ensures Railway healthcheck passes Attempt #1
-httpServer.listen(port, "0.0.0.0", () => {
+httpServer.listen(port, "0.0.0.0", async () => {
   console.log("=========================================");
   console.log(`🚀 SERVER IS LIVE ON PORT: ${port}`);
   console.log(`🔗 HEALTHCHECK: http://0.0.0.0:${port}/healthz`);
   console.log("=========================================");
+
+  try {
+    await setupFrontendRoutes();
+  } catch (error: any) {
+    console.error("❌ FRONTEND ROUTE SETUP FAILED:", error.message);
+  }
   
   // Now start the heavy lifting
   startServer();

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import type { FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertArticleSchema, type InsertArticle } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -30,9 +31,26 @@ interface ArticleEditorProps {
   onCancel: () => void;
 }
 
+function getFirstErrorMessage(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+
+  const candidate = error as { message?: unknown };
+  if (typeof candidate.message === "string" && candidate.message.trim().length > 0) {
+    return candidate.message;
+  }
+
+  for (const value of Object.values(error as Record<string, unknown>)) {
+    const nested = getFirstErrorMessage(value);
+    if (nested) return nested;
+  }
+
+  return undefined;
+}
+
 export function ArticleEditor({ initialData, onSubmit, isSubmitting, onCancel }: ArticleEditorProps) {
   const [isPreview, setIsPreview] = useState(false);
   const { toast } = useToast();
+  const formId = "article-editor-form";
   
   const form = useForm<InsertArticle>({
     resolver: zodResolver(insertArticleSchema),
@@ -40,7 +58,7 @@ export function ArticleEditor({ initialData, onSubmit, isSubmitting, onCancel }:
       title: "",
       content: "",
       tags: [],
-      isPublic: false,
+      isPublic: true,
     },
   });
 
@@ -54,6 +72,28 @@ export function ArticleEditor({ initialData, onSubmit, isSubmitting, onCancel }:
         description: error.message,
       });
     }
+  };
+
+  const handleInvalidSubmit = (errors: FieldErrors<InsertArticle>) => {
+    setIsPreview(false);
+
+    const firstErrorEntry = Object.entries(errors)[0] as [keyof InsertArticle, any] | undefined;
+    const firstErrorField = firstErrorEntry?.[0];
+    const firstErrorMessage = getFirstErrorMessage(firstErrorEntry?.[1]);
+
+    if (firstErrorField) {
+      if (firstErrorField === "tags") {
+        document.getElementById("article-tags-input")?.focus();
+      } else {
+        form.setFocus(firstErrorField);
+      }
+    }
+
+    toast({
+      variant: "destructive",
+      title: "Cannot save yet",
+      description: firstErrorMessage || "Please fix the highlighted form errors and try again.",
+    });
   };
 
   const currentContent = form.watch("content");
@@ -74,10 +114,11 @@ export function ArticleEditor({ initialData, onSubmit, isSubmitting, onCancel }:
   // Handle tag input as comma-separated string for simplicity in UI
   const [tagInput, setTagInput] = useState(initialData?.tags.join(", ") || "");
 
-  useEffect(() => {
-    const tags = tagInput.split(",").map(t => t.trim()).filter(Boolean);
-    form.setValue("tags", tags);
-  }, [tagInput, form]);
+  const handleTagInputChange = (value: string) => {
+    setTagInput(value);
+    const tags = value.split(",").map((t) => t.trim()).filter(Boolean);
+    form.setValue("tags", tags, { shouldDirty: true, shouldValidate: true });
+  };
 
   return (
     <div className="h-full flex flex-col gap-6">
@@ -129,7 +170,12 @@ export function ArticleEditor({ initialData, onSubmit, isSubmitting, onCancel }:
           ) : (
             <Button variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
           )}
-          <Button onClick={form.handleSubmit(handleSubmit)} disabled={isSubmitting} className="min-w-[100px]">
+          <Button
+            type="submit"
+            form={formId}
+            disabled={isSubmitting}
+            className="min-w-[100px]"
+          >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (
               <>
                 <Save className="w-4 h-4 mr-2" />
@@ -141,7 +187,7 @@ export function ArticleEditor({ initialData, onSubmit, isSubmitting, onCancel }:
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 flex flex-col gap-6 h-full">
+        <form id={formId} onSubmit={form.handleSubmit(handleSubmit, handleInvalidSubmit)} className="flex-1 flex flex-col gap-6 h-full">
           <div className="grid gap-6">
              <FormField
               control={form.control}
@@ -161,17 +207,28 @@ export function ArticleEditor({ initialData, onSubmit, isSubmitting, onCancel }:
             />
             
             <div className="flex flex-col md:flex-row gap-4 md:items-end">
-               <FormItem className="flex-1 w-full">
-                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tags</FormLabel>
-                 <FormControl>
-                   <Input 
-                     value={tagInput}
-                     onChange={(e) => setTagInput(e.target.value)}
-                     placeholder="technology, react, tutorial (comma separated)" 
-                     className="bg-transparent"
-                   />
-                 </FormControl>
-               </FormItem>
+               <FormField
+                 control={form.control}
+                 name="tags"
+                 render={() => (
+                   <FormItem className="flex-1 w-full">
+                     <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tags</FormLabel>
+                     <FormControl>
+                       <Input
+                         id="article-tags-input"
+                         value={tagInput}
+                         onChange={(e) => handleTagInputChange(e.target.value)}
+                         placeholder="technology, react, tutorial (comma separated)"
+                         className="bg-transparent"
+                       />
+                     </FormControl>
+                     <FormDescription>
+                       Letters, numbers, spaces and hyphens are allowed (up to 500 chars per tag).
+                     </FormDescription>
+                     <FormMessage />
+                   </FormItem>
+                 )}
+               />
 
                <FormField
                  control={form.control}

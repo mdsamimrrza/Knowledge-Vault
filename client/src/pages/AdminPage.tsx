@@ -204,6 +204,7 @@ export default function AdminPage() {
       if (error.message === "EMAIL_OTP_REQUIRED") {
         setPendingDemoteId(variables);
         setPendingActionType("DELETE");
+        setSelfDemoteStep("OTP"); // Skip to OTP input since we send it automatically below
         setShowEmailOtp(true);
         await apiRequest("POST", `/api/admin/users/${variables}/request-otp`, { actionType: "DELETE" });
         toast({ title: "Verification Required", description: "A security code has been sent to your email to authorize deletion." });
@@ -366,10 +367,10 @@ export default function AdminPage() {
                               size="sm"
                               className={u.isAdmin ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10" : "text-green-500 hover:text-green-600 hover:bg-green-500/10"}
                               onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isAdmin: !u.isAdmin } })}
-                              disabled={u.isBanned && !u.isAdmin}
+                              disabled={updateUserMutation.isPending || deleteUserMutation.isPending || (u.isBanned && !u.isAdmin)}
                               title={u.isBanned && !u.isAdmin ? "Unban user first to promote" : ""}
                             >
-                              {u.isAdmin ? <HistoryIcon className="w-3.5 h-3.5 mr-1" /> : <ShieldCheck className="w-3.5 h-3.5 mr-1" />}
+                              {updateUserMutation.isPending && pendingDemoteId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : u.isAdmin ? <HistoryIcon className="w-3.5 h-3.5 mr-1" /> : <ShieldCheck className="w-3.5 h-3.5 mr-1" />}
                               {u.isAdmin ? "Demote" : "Promote"}
                             </Button>
                             <Button
@@ -385,9 +386,9 @@ export default function AdminPage() {
                                   variant: "destructive"
                                 });
                               }}
-                              disabled={u.id === user?.id}
+                              disabled={updateUserMutation.isPending || deleteUserMutation.isPending || u.id === user?.id}
                             >
-                              <Ban className="w-3.5 h-3.5 mr-1" />
+                              {updateUserMutation.isPending && pendingDemoteId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Ban className="w-3.5 h-3.5 mr-1" />}
                               {u.isBanned ? "Unban" : "Ban User"}
                             </Button>
                             <Button
@@ -403,9 +404,9 @@ export default function AdminPage() {
                                   variant: "destructive"
                                 });
                               }}
-                              disabled={u.id === user?.id}
+                              disabled={updateUserMutation.isPending || deleteUserMutation.isPending || u.id === user?.id}
                             >
-                              <Trash2 className="w-3.5 h-3.5 mr-1" />
+                              {deleteUserMutation.isPending && pendingDemoteId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
                               Delete
                             </Button>
                           </div>
@@ -451,10 +452,10 @@ export default function AdminPage() {
                           size="icon"
                           className={`w-10 h-10 rounded-xl ${u.isAdmin ? "text-amber-500 bg-amber-500/5" : "text-green-500 bg-green-500/5"}`}
                           onClick={() => updateUserMutation.mutate({ id: u.id, updates: { isAdmin: !u.isAdmin } })}
-                          disabled={u.isBanned && !u.isAdmin}
+                          disabled={updateUserMutation.isPending || deleteUserMutation.isPending || (u.isBanned && !u.isAdmin)}
                           title={u.isAdmin ? "Demote" : u.isBanned ? "Unban to promote" : "Promote"}
                         >
-                          {u.isAdmin ? <HistoryIcon className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                          {updateUserMutation.isPending && pendingDemoteId === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : u.isAdmin ? <HistoryIcon className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
                         </Button>
                         <Button
                           variant="ghost"
@@ -469,10 +470,10 @@ export default function AdminPage() {
                               variant: "destructive"
                             });
                           }}
-                          disabled={u.id === user?.id}
+                          disabled={updateUserMutation.isPending || deleteUserMutation.isPending || u.id === user?.id}
                           title={u.isBanned ? "Unban" : "Ban User"}
                         >
-                          <Ban className="w-4 h-4" />
+                          {updateUserMutation.isPending && pendingDemoteId === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
                         </Button>
                       </div>
                       
@@ -489,10 +490,10 @@ export default function AdminPage() {
                             variant: "destructive"
                           });
                         }}
-                        disabled={u.id === user?.id}
+                        disabled={updateUserMutation.isPending || deleteUserMutation.isPending || u.id === user?.id}
                         title="Delete User"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {deleteUserMutation.isPending && pendingDemoteId === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       </Button>
                     </div>
                   </div>

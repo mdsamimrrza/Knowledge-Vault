@@ -1,13 +1,36 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useRoute, useLocation } from "wouter";
 import { useArticle, useArticleVersions, useRestoreVersion } from "@/hooks/use-articles";
 import { useUser } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Clock, RotateCcw } from "lucide-react";
+import { Loader2, ArrowLeft, Clock, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import * as diff from "diff";
+
+function DiffViewer({ oldText, newText }: { oldText: string; newText: string }) {
+  const mergedMarkdown = useMemo(() => {
+    const changes = diff.diffWordsWithSpace(oldText, newText);
+    return changes.map(part => {
+      if (part.added) {
+        return `<ins>${part.value}</ins>`;
+      }
+      if (part.removed) {
+        return `<del>${part.value}</del>`;
+      }
+      return part.value;
+    }).join("");
+  }, [oldText, newText]);
+  
+  return (
+    <div className="p-4 bg-secondary/30 rounded-lg border border-border/50">
+      <MarkdownContent content={mergedMarkdown} />
+    </div>
+  );
+}
 
 export default function ArticleHistory() {
   const [, params] = useRoute("/article/:id/versions");
@@ -21,6 +44,7 @@ export default function ArticleHistory() {
   const { toast } = useToast();
 
   const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null);
+  const [expandedVersionId, setExpandedVersionId] = useState<string | null>(null);
 
   const handleRestore = async (versionId: string) => {
     setRestoringVersionId(versionId);
@@ -63,58 +87,101 @@ export default function ArticleHistory() {
               Version History
             </h1>
             <p className="text-muted-foreground mt-2">
-              History for <span className="font-semibold text-foreground">{article?.title}</span>
+              Review changes and restore previous states for <span className="font-semibold text-foreground">{article?.title}</span>
             </p>
           </div>
 
           <div className="relative border-l-2 border-border ml-4 space-y-8 pb-10">
-            {versions?.map((version, index) => (
-              <div key={version.id} className="relative pl-8 group">
-                {/* Timeline dot */}
-                <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-background border-2 border-muted-foreground group-hover:border-primary group-hover:scale-110 transition-all" />
-                
-                <div className="bg-card p-6 rounded-xl border border-border shadow-sm group-hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground font-mono">
-                      <Clock className="w-4 h-4" />
-                      {format(new Date(version.updatedAt), 'MMM d, yyyy @ h:mm a')}
-                    </div>
-                    {index === 0 && (
-                      <span className="bg-primary/15 text-primary px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border border-primary/20">
-                        Current
-                      </span>
-                    )}
-                  </div>
+            {versions?.map((version, index) => {
+              const isExpanded = expandedVersionId === version.id;
+              // Compare with the version that came AFTER it in the list (which is older)
+              const previousVersion = versions[index + 1];
+              const oldContent = previousVersion?.content || "";
+              
+              return (
+                <div key={version.id} className="relative pl-8 group">
+                  {/* Timeline dot */}
+                  <div className={cn(
+                    "absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-background border-2 transition-all z-10",
+                    index === 0 ? "border-primary bg-primary/20" : "border-muted-foreground group-hover:border-primary"
+                  )} />
                   
-                  <div className="prose-content text-sm max-h-32 overflow-hidden relative bg-secondary/30 p-4 rounded-lg">
-                    <MarkdownContent content={version.content.slice(0, 500)} />
-                    <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-secondary/80 to-transparent" />
-                  </div>
-                  
-                  {index !== 0 && user && (
-                    <div className="mt-4 pt-4 border-t border-border/50 flex justify-end">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => handleRestore(version.id)}
-                        disabled={restoreMutation.isPending}
-                      >
-                        {restoringVersionId === version.id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <RotateCcw className="w-3 h-3" />
+                  <div className={cn(
+                    "bg-card p-6 rounded-2xl border transition-all duration-300",
+                    isExpanded ? "border-primary/50 shadow-lg shadow-primary/5" : "border-border shadow-sm hover:shadow-md"
+                  )}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-sm text-foreground font-bold">
+                          <Clock className="w-4 h-4 text-primary" />
+                          {format(new Date(version.updatedAt), 'MMMM d, yyyy')}
+                          <span className="text-muted-foreground font-normal">at {format(new Date(version.updatedAt), 'h:mm a')}</span>
+                        </div>
+                        {index === 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-primary/20">
+                              Current Version
+                            </span>
+                          </div>
                         )}
-                        Restore this version
+                      </div>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 text-xs font-bold hover:bg-primary/10 hover:text-primary transition-colors"
+                        onClick={() => setExpandedVersionId(isExpanded ? null : version.id)}
+                      >
+                        {isExpanded ? (
+                          <>Hide Changes <ChevronUp className="w-3.5 h-3.5" /></>
+                        ) : (
+                          <>View Changes <ChevronDown className="w-3.5 h-3.5" /></>
+                        )}
                       </Button>
                     </div>
-                  )}
+                    
+                    {isExpanded ? (
+                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                        <DiffViewer oldText={oldContent} newText={version.content} />
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground/70 bg-secondary/20 p-3 rounded-lg line-clamp-2 italic">
+                        {version.content.substring(0, 150)}...
+                      </div>
+                    )}
+                    
+                    {(index !== 0 || isExpanded) && user && (
+                      <div className="mt-6 pt-4 border-t border-border/50 flex justify-between items-center">
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                          {isExpanded ? "Full Comparison View" : "Summary View"}
+                        </div>
+                        {index !== 0 && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="gap-2 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 font-bold"
+                            onClick={() => handleRestore(version.id)}
+                            disabled={restoreMutation.isPending}
+                          >
+                            {restoringVersionId === version.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            )}
+                            Restore this version
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {(!versions || versions.length === 0) && (
-              <div className="pl-8 text-muted-foreground italic">No history available for this article yet.</div>
+              <div className="pl-8 text-muted-foreground italic bg-secondary/20 p-8 rounded-2xl border-2 border-dashed border-border">
+                No history available for this article yet. Changes will appear here as you save updates.
+              </div>
             )}
           </div>
         </div>
