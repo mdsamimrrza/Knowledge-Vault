@@ -11,6 +11,12 @@ import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import * as diff from "diff";
 
+function formatActionLabel(action?: string) {
+  if (action === "CREATED") return "Created";
+  if (action === "RESTORED") return "Restored";
+  return "Updated";
+}
+
 function DiffViewer({ oldText, newText }: { oldText: string; newText: string }) {
   const mergedMarkdown = useMemo(() => {
     const changes = diff.diffWordsWithSpace(oldText, newText);
@@ -38,7 +44,7 @@ export default function ArticleHistory() {
   const id = params?.id || "";
   
   const { data: article } = useArticle(id);
-  const { data: versions, isLoading } = useArticleVersions(id);
+  const { data: versions, isLoading, error } = useArticleVersions(id);
   const restoreMutation = useRestoreVersion();
   const { data: user } = useUser();
   const { toast } = useToast();
@@ -65,6 +71,22 @@ export default function ArticleHistory() {
         <Sidebar />
         <main className="flex-1 flex items-center justify-center pt-16 md:pt-0">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 flex items-center justify-center px-4 pt-16 md:pt-0">
+          <div className="max-w-lg rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-center">
+            <h2 className="text-xl font-semibold text-foreground">Failed to load version history</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              The history request did not complete successfully. Try refreshing the page after saving another article update.
+            </p>
+          </div>
         </main>
       </div>
     );
@@ -116,6 +138,12 @@ export default function ArticleHistory() {
                           <Clock className="w-4 h-4 text-primary" />
                           {format(new Date(version.updatedAt), 'MMMM d, yyyy')}
                           <span className="text-muted-foreground font-normal">at {format(new Date(version.updatedAt), 'h:mm a')}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-semibold text-foreground/80">
+                            {formatActionLabel(version.action)}
+                          </span>
+                          <span>by {version.editedByName || "Unknown user"}</span>
                         </div>
                         {index === 0 && (
                           <div className="flex items-center gap-2">

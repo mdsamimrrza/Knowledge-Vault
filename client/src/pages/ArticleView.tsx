@@ -66,20 +66,20 @@ export default function ArticleView() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen overflow-x-hidden bg-background">
       <Sidebar />
 
-      <main className="flex-1 px-4 pt-16 pb-4 md:p-12 overflow-y-auto max-h-screen">
-        <div className="max-w-4xl mx-auto">
+      <main className="flex-1 min-w-0 overflow-x-hidden px-4 pt-16 pb-4 md:max-h-screen md:overflow-y-auto md:p-12">
+        <div className="mx-auto max-w-4xl min-w-0">
           {/* Header Navigation */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Link href="/">
               <Button variant="ghost" className="gap-2 pl-0 hover:pl-2 transition-all text-muted-foreground hover:text-primary">
                 <ArrowLeft className="w-4 h-4" /> Back to Library
               </Button>
             </Link>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               {user && (
                 <Button
                   variant="ghost"
@@ -145,14 +145,14 @@ export default function ArticleView() {
               {article.title}
             </h1>
 
-            <div className="flex items-center gap-6 text-sm text-muted-foreground font-medium">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground font-medium">
               <span className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 Updated {format(new Date(article.updatedAt), 'MMMM d, yyyy')}
               </span>
-              <span className="w-1 h-1 rounded-full bg-border" />
+              <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
               <span>Created {format(new Date(article.createdAt), 'MMM d, yyyy')}</span>
-              <span className="w-1 h-1 rounded-full bg-border" />
+              <span className="hidden h-1 w-1 rounded-full bg-border sm:block" />
               <span className="flex items-center gap-1.5">
                 {article.isPublic ? (
                   <><Globe className="w-3.5 h-3.5 text-green-600" /> Public</>
@@ -164,7 +164,7 @@ export default function ArticleView() {
           </header>
 
           {/* Article Content */}
-          <article className="prose-content min-h-[400px]">
+          <article className="prose-content min-h-[400px] min-w-0 overflow-x-hidden break-words">
             <MarkdownContent content={article.content} />
           </article>
         </div>

@@ -37,6 +37,13 @@ export interface IStorage {
 }
 
 export class MongoStorage implements IStorage {
+  private async canEditArticle(userId?: string): Promise<boolean> {
+    if (!userId || !isValidObjectId(userId)) return false;
+
+    const actor = await this.getUserById(userId);
+    return !!actor && !actor.isBanned;
+  }
+
   private async canManageArticle(articleId: string, userId?: string): Promise<boolean> {
     if (!userId || !isValidObjectId(articleId)) return false;
 
@@ -205,7 +212,7 @@ export class MongoStorage implements IStorage {
 
   async updateArticle(id: string, updates: Partial<InsertArticle>, userId?: string): Promise<Article | undefined> {
     if (!isValidObjectId(id)) return undefined;
-    if (!(await this.canManageArticle(id, userId))) {
+    if (!(await this.canEditArticle(userId))) {
       throw new Error("FORBIDDEN");
     }
 
@@ -248,8 +255,27 @@ export class MongoStorage implements IStorage {
 
   async getArticleVersions(articleId: string): Promise<ArticleVersion[]> {
     if (!isValidObjectId(articleId)) return [];
-    const versions = await VersionModel.find({ articleId }).sort({ createdAt: -1 });
-    return versions.map(v => v.toJSON()) as unknown as ArticleVersion[];
+    const versions = await VersionModel.find({ articleId })
+      .populate("editedBy", "username")
+      .sort({ createdAt: -1 });
+
+    return versions.map((version) => {
+      const editor = version.get("editedBy") as { _id?: mongoose.Types.ObjectId; username?: string } | undefined;
+      const rawArticleId = version.get("articleId") as mongoose.Types.ObjectId | string;
+      const rawUpdatedAt = version.get("updatedAt") as Date | string;
+      const rawContent = version.get("content") as string;
+      const rawAction = version.get("action") as ArticleVersion["action"];
+
+      return {
+        id: version._id.toString(),
+        articleId: rawArticleId.toString(),
+        content: rawContent,
+        editedBy: editor?._id?.toString(),
+        editedByName: editor?.username,
+        action: rawAction,
+        updatedAt: rawUpdatedAt instanceof Date ? rawUpdatedAt.toISOString() : rawUpdatedAt,
+      } satisfies ArticleVersion;
+    });
   }
 
   async getAllTags(): Promise<TagCount[]> {
@@ -264,7 +290,7 @@ export class MongoStorage implements IStorage {
 
   async restoreVersion(articleId: string, versionId: string, userId?: string): Promise<Article | undefined> {
     if (!isValidObjectId(articleId) || !isValidObjectId(versionId)) return undefined;
-    if (!(await this.canManageArticle(articleId, userId))) {
+    if (!(await this.canEditArticle(userId))) {
       throw new Error("FORBIDDEN");
     }
 

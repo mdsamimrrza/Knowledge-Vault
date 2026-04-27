@@ -1,11 +1,11 @@
 import { useMemo } from "react";
-import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
 import { LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import rehypeRaw from "rehype-raw";
 
 import { extractWikiLinkTitles, preProcessWikiLinks } from "@shared/wiki-links";
 
@@ -38,7 +38,6 @@ interface MarkdownContentProps {
 
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
   const { data: resolvedLinks } = useResolveWikiLinks(content);
-  const [, navigate] = useLocation();
   const processed = useMemo(() => preProcessWikiLinks(content), [content]);
 
   const components: Components = useMemo(
@@ -61,23 +60,17 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
 
           if (articleId) {
             // Existing article → styled blue link with manual navigation
-            const handleClick = (e: React.MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              navigate(`/article/${articleId}`);
-            };
             return (
               <a
                 href={`/article/${articleId}`}
-                onClick={handleClick}
                 className={cn(
-                  "inline-flex items-center gap-0.5 text-primary font-medium cursor-pointer",
+                  "inline break-words text-primary font-medium cursor-pointer touch-manipulation",
                   "underline decoration-primary/30 underline-offset-2",
                   "hover:decoration-primary hover:text-primary/80 transition-colors"
                 )}
               >
-                <LinkIcon className="w-3 h-3 shrink-0 opacity-60" />
                 {children}
+                <LinkIcon className="ml-1 inline-block w-3 h-3 align-middle opacity-60" />
               </a>
             );
           }
@@ -109,12 +102,13 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
         );
       },
     }),
-    [resolvedLinks, navigate]
+    [resolvedLinks]
   );
 
   return (
     <ReactMarkdown
       components={components}
+      rehypePlugins={[rehypeRaw]}
       urlTransform={(url) => {
         // Allow our custom wikilink:// protocol through without sanitization
         if (url.startsWith("wikilink://")) return url;

@@ -57,6 +57,8 @@ export const articleVersionSchema = z.object({
   articleId: z.string(),
   content: z.string(),
   editedBy: z.string().optional(),
+  editedByName: z.string().optional(),
+  action: z.enum(["CREATED", "UPDATED", "RESTORED"]).optional(),
   updatedAt: z.string(),
 });
 

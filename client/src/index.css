@@ -85,7 +85,7 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased min-h-screen;
+    @apply bg-background text-foreground antialiased min-h-screen overflow-x-hidden;
     background-image:
       radial-gradient(at 0% 0%, hsla(174, 42%, 35%, 0.05) 0px, transparent 50%),
       radial-gradient(at 100% 100%, hsla(174, 42%, 35%, 0.05) 0px, transparent 50%);
@@ -112,7 +112,7 @@
 
   /* Typography for Markdown Content */
   .prose-content {
-    @apply text-lg leading-relaxed text-foreground/90 max-w-none;
+    @apply text-lg leading-relaxed text-foreground/90 max-w-none min-w-0 break-words overflow-x-hidden;
   }
 
   .prose-content h1 {
@@ -129,6 +129,14 @@
 
   .prose-content p {
     @apply mb-6;
+  }
+
+  .prose-content p,
+  .prose-content li,
+  .prose-content a,
+  .prose-content span {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .prose-content ul {

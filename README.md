@@ -1,274 +1,196 @@
-# 🔐 Knowledge Vault
+# 🧠 Knowledge Vault
 
-<div align="center">
+> A full-stack personal wiki and knowledge base — write in Markdown, link articles together, manage access, and keep a full version history.
 
-### *A Secure, Full-Stack Personal Wiki & Knowledge Base*
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-4CAF50?style=for-the-badge&logoColor=white)](https://knowledge-vault-production.up.railway.app)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongoosejs.com/)
-[![Vitest](https://img.shields.io/badge/Tests-Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
-
-*Create • Organize • Interlink — with Enterprise-Grade Security*
-
-</div>
-
----
-
-## 📌 Table of Contents
-
-- [Overview](#-overview)
-- [Screenshots](#-screenshots)
-- [Features](#-features)
-- [Admin Control Center](#-admin-control-center)
-- [Security Architecture](#-security-architecture)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-- [Environment Variables](#-environment-variables)
-- [API Reference](#-api-reference)
-- [Testing](#-testing)
-- [Maintenance Scripts](#-maintenance-scripts)
-- [Deployment](#-deployment)
-- [License](#-license)
-
----
-
-## 🧠 Overview
-
-**Knowledge Vault** is a full-stack, production-ready personal wiki application. It lets you create, edit, organize, and hyperlink markdown-based knowledge articles with a beautiful **Glassy Teal** design system.
-
-Built with a security-first philosophy, every administrative action — from banning a user to resetting a password — goes through a hardened, multi-stage verification flow. It is fully deployed on [Railway](https://railway.app) and ready to be self-hosted.
-
-**Key design goals:**
-- 🔒 Zero-Trust administrative controls
-- 📝 Rich markdown articles with wiki-style `[[links]]`
-- 🎨 Premium "Glassy Teal" dark UI, fully responsive
-- ✅ Comprehensive automated test suite
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-18%2B-green)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green)](https://www.mongodb.com/)
 
 ---
 
 ## 📸 Screenshots
 
-### 🖥️ Desktop
+| Desktop View | Mobile View |
+|---|---|
+| ![Laptop Screen](./client/public/laptopScreen.png) | ![Mobile Screen](./client/public/mobileScreen.png) |
 
-<div align="center">
-  <img src="client/public/laptopScreen.png" width="700" alt="Desktop View — Knowledge Vault">
-</div>
-
-<br>
-
-### 📱 Mobile
-
-<div align="center">
-  <img src="client/public/mobileScreen.png" width="180" alt="Mobile View — Knowledge Vault">
-</div>
+| Admin Panel |
+|---|
+| ![Admin Panel](./client/public/adminPanel.png) |
 
 ---
 
 ## ✨ Features
 
-### 📄 Article Management
-- Create, edit, and delete **Markdown articles** with live preview
-- Articles support **tags** for categorization and filtering
-- **Public / Private** visibility control per article
-- Full **version history** with up to 50 versions — restore any previous state
-- **Slug-based URLs** for clean, shareable article links
+### 📝 Articles
 
-### 🔗 Wiki-Style Linking
-- Use `[[Article Title]]` syntax to create internal hyperlinks between articles
-- Automatic **title resolution** — broken links are visually flagged
-- Real-time link preview on hover
+- Write and edit articles in **Markdown** with a live preview split-pane
+- **Public / private** visibility toggle per article
+- **Tags** for organization and filtering
+- Auto **slug generation** from titles
+- Full **version history** with diff view and one-click restore
+- Version entries track: timestamp, action (`CREATED` / `UPDATED` / `RESTORED`), and editor username
 
-### ❤️ Favorites
-- Users can **star/favorite** any article for quick access
-- Personal favorites feed, separate from the public article list
+### 🔗 Wiki Linking
+
+- `[[Article Title]]` syntax creates internal links between articles
+- Missing articles are visually marked as broken links
+- Visibility rules are respected — private article existence is never leaked to unauthorized users
+- Mobile/tablet touch behavior uses native links for reliability
 
 ### 🔍 Search & Discovery
-- **Full-text search** powered by MongoDB text indexes
-- **Tag-based filtering** — click any tag to browse all related articles
-- Paginated results with configurable limits
 
-### 👤 User Accounts
-- Secure **register & login** with Zod-validated forms
-- **Password reset via Email OTP** — 6-digit codes with 15-minute expiry
-- Rate limiting on OTP requests (60-second cooldown)
-- Automatic **ban check** on login — banned users are rejected immediately
+- Full-text search powered by **MongoDB text indexes**
+- Filter by **tags** or **favorites**
+- Reverse chronological article listing
 
----
+### 🔐 Authentication
 
-## 🏗️ Admin Control Center
+- Register, login, logout
+- **Session-based auth** via `express-session` + `connect-mongo`
+- **Password reset via email OTP** with rate limiting and attempt caps
+- Active sessions are invalidated after password reset
 
-<div align="center">
-  <img src="client/public/adminPanel.png" width="700" alt="Admin Control Center">
-</div>
+### 🛡️ Admin Panel
 
-The built-in Admin Panel gives administrators complete oversight and control over the platform:
-
-### 📊 Live Dashboard Stats
-| Metric | Description |
-|--------|-------------|
-| Total Users | Count of all registered accounts |
-| Total Articles | All articles in the system |
-| Admins | Active administrator count |
-| Suspended | Currently banned user count |
-
-### 👥 User Management
-| Action | Description | Security Level |
-|--------|-------------|----------------|
-| **Promote** | Grant admin privileges to a user | OTP Required |
-| **Demote** | Revoke admin privileges | OTP Required |
-| **Ban User** | Suspend a user's system access | Confirmation Dialog |
-| **Unban User** | Restore a suspended account | Confirmation Dialog |
-| **Delete User** | Permanently remove an account | Confirmation + OTP |
-
-**Smart Rules:**
-- 🚫 Banned users **cannot be promoted** until unbanned
-- 🛡️ Admins **cannot ban themselves**
-- ⚠️ Every destructive action shows a **custom AlertDialog** confirmation
+- View user and article statistics
+- Promote / demote admins
+- Ban / unban users
+- Delete users
+- **OTP confirmation** for high-risk actions
+- **Master key verification** for super-admin operations
+- User sessions are automatically invalidated on ban or delete
 
 ---
 
-## 🛡️ Security Architecture
+## 🛠️ Tech Stack
 
-Knowledge Vault implements a layered, **Zero-Trust** security model:
+### Frontend
 
-### 1. Environment Validation
-On every server startup, all required environment variables are validated with **Zod**. If any are missing or malformed (e.g., `SESSION_SECRET` shorter than 32 chars), the server refuses to start.
+| Tech | Purpose |
+|---|---|
+| React 18 + TypeScript | UI framework |
+| Vite 7 | Dev server & bundler |
+| Wouter | Client-side routing |
+| TanStack Query | Server state & caching |
+| React Hook Form + Zod | Forms & validation |
+| Tailwind CSS | Styling |
+| Radix UI / shadcn | Accessible UI components |
+| Lucide React | Icons |
 
-### 2. Session Protection
-- `express-session` backed by **MongoDB** (via `connect-mongo`)
-- Mandatory `SESSION_SECRET` enforced at startup
-- `trust proxy` support for production reverse-proxy deployments
-- Session-bound admin state verification on every request
+### Backend
 
-### 3. Role-Based Access Control (RBAC)
-```
-Guest    → Read public articles only
-User     → Read + Favorite articles, manage own account
-Admin    → Full CRUD on articles, access to Admin Panel
-Super Admin → All admin actions + promote/demote admins
-```
+| Tech | Purpose |
+|---|---|
+| Express 5 + TypeScript | HTTP server |
+| MongoDB + Mongoose | Database & ODM |
+| express-session + connect-mongo | Session management |
+| bcryptjs | Password hashing |
+| nodemailer | OTP email delivery |
+| express-rate-limit | Request throttling |
+| helmet + cors | Security headers |
 
-### 4. High-Risk Admin Actions (Multi-Stage Authorization)
-```
-Step 1: Click Action → AlertDialog Confirmation
-Step 2: Server checks → EMAIL_OTP_REQUIRED
-Step 3: Super Admin also needs → Master Key Verification
-Step 4: OTP sent to admin's email (6-digit, 5min expiry)
-Step 5: Admin enters OTP → Action is executed
-```
+### Tooling
 
-### 5. Anti-Bounce Email Shield
-Before sending any OTP or reset email, the system performs a **live DNS MX record lookup** to verify the email domain actually exists. Non-existent domains are rejected immediately, preventing bounce spam.
-
-### 6. Password Reset Security
-- OTP-based flow (no magic links to avoid phishing)
-- 15-minute OTP expiry
-- 60-second rate limit between requests
-- Super Admin password reset requires **Master Key** first
-- Test/disposable email addresses are blacklisted
-
----
-
-## 🚀 Tech Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Frontend Framework** | React 18 + TypeScript | UI Components |
-| **Build Tool** | Vite 7 | Dev server & bundling |
-| **State / Data** | TanStack Query v5 | Server state & caching |
-| **Routing** | Wouter | Lightweight client routing |
-| **Forms** | React Hook Form + Zod | Validated forms |
-| **UI Components** | shadcn/ui + Radix UI | Accessible primitives |
-| **Styling** | Tailwind CSS v3 | Utility-first CSS |
-| **Animations** | Framer Motion | Smooth transitions |
-| **Icons** | Lucide React | Icon library |
-| **Backend** | Express 5 + TypeScript | REST API server |
-| **Database** | MongoDB + Mongoose | Data persistence |
-| **Sessions** | express-session + connect-mongo | Auth sessions |
-| **Passwords** | bcryptjs | Password hashing |
-| **Email** | Nodemailer | SMTP OTP delivery |
-| **Validation** | Zod | Schema validation (shared) |
-| **Testing** | Vitest + V8 | Unit & integration tests |
+- **Vitest** — unit testing
+- **tsx / esbuild** — fast TS execution and bundling
 
 ---
 
 ## 📁 Project Structure
 
 ```
-knowledge-vault/
-├── client/                  # React frontend (Vite)
-│   ├── public/              # Static assets (screenshots, banner)
+Knowledge-Vault/
+├── client/
+│   ├── public/
+│   │   ├── adminPanel.png
+│   │   ├── banner.png
+│   │   ├── laptopScreen.png
+│   │   └── mobileScreen.png
+│   ├── index.html
 │   └── src/
-│       ├── components/      # Reusable UI components
-│       │   └── ui/          # shadcn/ui primitives
-│       ├── hooks/           # Custom React hooks (useAuth, etc.)
-│       ├── lib/             # API client, query client, utils
-│       └── pages/           # Route-level page components
-│           ├── AdminPage.tsx
-│           ├── AuthPage.tsx
-│           ├── Home.tsx
-│           ├── ArticleView.tsx
-│           └── ...
-├── server/                  # Express backend
-│   ├── lib/                 # Email, versioning, env helpers
-│   ├── middleware/          # Auth middleware (requireAuth, requireAdmin)
-│   ├── routes/api/          # REST API route handlers
-│   │   ├── admin.ts         # Admin management endpoints
-│   │   ├── articles.ts      # Article CRUD
-│   │   ├── auth.ts          # Login, register, OTP, reset
-│   │   ├── favorites.ts     # Per-user favorites
-│   │   └── tags.ts          # Tag aggregation
-│   ├── models.ts            # Mongoose models
-│   ├── storage.ts           # Data access layer
-│   └── index.ts             # Server entry point
-├── shared/                  # Shared types & schemas (client + server)
-│   ├── schema.ts            # Zod schemas & TypeScript types
-│   ├── routes.ts            # Route constants
-│   └── wiki-links.ts        # Wiki-link parsing utilities
-├── scripts/                 # Admin CLI scripts
-│   ├── promote-admin.ts
-│   └── cleanup-test-user.ts
-├── tests/                   # Vitest test suites
-└── .env.example             # Environment variable template
+│       ├── components/
+│       ├── hooks/
+│       ├── lib/
+│       ├── pages/
+│       ├── main.tsx
+│       └── index.css
+├── server/
+│   ├── lib/
+│   ├── middleware/
+│   ├── routes/
+│   │   └── api/
+│   ├── types/
+│   ├── db.ts
+│   ├── index.ts
+│   ├── models.ts
+│   ├── static.ts
+│   ├── storage.ts
+│   └── vite.ts
+├── shared/
+│   ├── routes.ts
+│   ├── schema.ts
+│   └── wiki-links.ts
+├── scripts/
+├── package.json
+└── tsconfig.json
 ```
 
 ---
 
-## ⚡ Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-- **Node.js** v18 or higher
-- **MongoDB** connection (Atlas or local)
-- **SMTP credentials** (Gmail App Password recommended)
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/your-username/knowledge-vault.git
-cd knowledge-vault
-```
+- Node.js 18+
+- MongoDB instance (local or Atlas)
+- SMTP credentials for OTP email delivery
 
-### 2. Install dependencies
+### 1. Clone & Install
+
 ```bash
+git clone https://github.com/mdsamimrrza/knowledgeBase.git
+cd knowledgeBase
 npm install
 ```
 
-### 3. Configure environment
-```bash
-cp .env.example .env
-# Edit .env with your values (see Environment Variables section)
+### 2. Configure Environment
+
+Create a `.env` file in the root:
+
+```env
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/knowledge-vault
+
+SESSION_SECRET=replace-with-a-long-random-secret
+JWT_SECRET=replace-with-a-jwt-secret
+
+SUPER_ADMIN_EMAIL=admin@example.com
+ADMIN_SECRET_KEY=replace-with-super-admin-master-key
+
+EMAIL_USER=your-smtp-user
+EMAIL_PASS=your-smtp-password
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+
+PORT=3000
+NODE_ENV=development
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 
-### 4. Start development server
+> ⚠️ `SESSION_SECRET` must be long and random. Never commit `.env` to version control.
+
+### 3. Run in Development
+
 ```bash
 npm run dev
 ```
 
-The app will be available at **http://localhost:5000**
+App runs at → **<http://localhost:3000>**
 
-### 5. Build for production
+### 4. Build for Production
+
 ```bash
 npm run build
 npm start
@@ -276,164 +198,151 @@ npm start
 
 ---
 
-## ⚙️ Environment Variables
+## 🔌 API Reference
 
-Create a `.env` file in the project root. All variables are validated at startup with Zod — the server will not start if any are missing or invalid.
+<details>
+<summary><strong>Auth</strong></summary>
 
-```env
-# ── Database ──────────────────────────────────────────
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/knowledge-vault
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/auth/me` | Get current session user |
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/logout` | Logout |
+| POST | `/api/auth/forgot-password` | Request OTP |
+| POST | `/api/auth/verify-otp` | Verify OTP |
+| POST | `/api/auth/reset-password` | Reset password |
 
-# ── Session Security ──────────────────────────────────
-# Must be at least 32 characters
-SESSION_SECRET=your-random-32-char-secret-here
+</details>
 
-# ── Super Admin Configuration ─────────────────────────
-# Email of the primary administrator
-SUPER_ADMIN_EMAIL=admin@yourdomain.com
-# Hardware-style master key for high-risk actions
-ADMIN_SECRET_KEY=your-secret-master-key
+<details>
+<summary><strong>Articles</strong></summary>
 
-# ── SMTP Email (for OTP delivery) ─────────────────────
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-google-app-password   # Use Gmail App Passwords
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/articles` | List all articles |
+| GET | `/api/articles/:id` | Get article by ID |
+| GET | `/api/articles/slug/:slug` | Get article by slug |
+| POST | `/api/articles` | Create article |
+| PUT | `/api/articles/:id` | Update article |
+| DELETE | `/api/articles/:id` | Delete article |
+| POST | `/api/articles/resolve-titles` | Resolve wiki link titles |
+| GET | `/api/articles/:id/versions` | Get version history |
+| POST | `/api/articles/:id/versions/:versionId/restore` | Restore version |
 
-# ── Optional ──────────────────────────────────────────
-PORT=5000
-NODE_ENV=production
-```
+</details>
 
-> **Tip:** Generate a secure `SESSION_SECRET` with:
-> ```bash
-> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-> ```
+<details>
+<summary><strong>Favorites</strong></summary>
 
----
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/favorites/:articleId` | Add to favorites |
+| DELETE | `/api/favorites/:articleId` | Remove from favorites |
 
-## 📡 API Reference
+</details>
 
-### Authentication (`/api/auth`)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/me` | Session | Get current user |
-| `POST` | `/register` | Public | Register new account |
-| `POST` | `/login` | Public | Login |
-| `POST` | `/logout` | Session | Logout |
-| `POST` | `/forgot-password` | Public | Request password reset OTP |
-| `POST` | `/verify-otp` | Public | Verify reset OTP code |
-| `POST` | `/reset-password` | Public | Set new password |
+<details>
+<summary><strong>Admin</strong></summary>
 
-### Articles (`/api/articles`)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/` | Public | List articles (search, tag, page) |
-| `GET` | `/:id` | Conditional | Get single article |
-| `GET` | `/slug/:slug` | Conditional | Get article by slug |
-| `POST` | `/` | Admin | Create article |
-| `PATCH` | `/:id` | Admin | Update article |
-| `DELETE` | `/:id` | Admin | Delete article |
-| `GET` | `/:id/versions` | Auth | Get version history |
-| `POST` | `/:id/versions/:vId/restore` | Admin | Restore a version |
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/stats` | Get stats |
+| GET | `/api/admin/users` | List users |
+| PATCH | `/api/admin/users/:id` | Update user |
+| DELETE | `/api/admin/users/:id` | Delete user |
+| POST | `/api/admin/users/:id/verify-master-key` | Verify master key |
+| POST | `/api/admin/users/:id/request-otp` | Request OTP |
+| POST | `/api/admin/users/:id/confirm-promote` | Confirm promote |
+| POST | `/api/admin/users/:id/confirm-demote` | Confirm demote |
+| POST | `/api/admin/users/:id/confirm-ban` | Confirm ban |
+| POST | `/api/admin/users/:id/confirm-delete` | Confirm delete |
+| POST | `/api/admin/users/:id/confirm-self-demote` | Confirm self demote |
 
-### Admin (`/api/admin`)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/stats` | Admin | Dashboard statistics |
-| `GET` | `/users` | Admin | List all users |
-| `PATCH` | `/users/:id` | Admin | Update user status |
-| `DELETE` | `/users/:id` | Admin | Initiate user deletion (triggers OTP) |
-| `POST` | `/users/:id/request-otp` | Admin | Send action OTP to admin email |
-| `POST` | `/users/:id/verify-master-key` | Super Admin | Verify master key |
-| `POST` | `/users/:id/confirm-demote` | Admin | Confirm with OTP |
-| `POST` | `/users/:id/confirm-promote` | Admin | Confirm with OTP |
-| `POST` | `/users/:id/confirm-ban` | Admin | Confirm with OTP |
-| `POST` | `/users/:id/confirm-delete` | Admin | Confirm with OTP |
-
-### Favorites (`/api/favorites`)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/` | Auth | Get user's favorite article IDs |
-| `POST` | `/:id` | Auth | Add article to favorites |
-| `DELETE` | `/:id` | Auth | Remove from favorites |
+</details>
 
 ---
 
 ## 🧪 Testing
 
-Tests are written with **Vitest** and cover critical business logic:
-
 ```bash
-# Run all tests once
+# Run tests
 npm test
 
-# Run in watch mode (re-runs on file changes)
+# Watch mode
 npm run test:watch
 
-# Generate HTML coverage report
+# Coverage report
 npm run test:coverage
+
+# Type check
+npm run check
 ```
 
-**Test Coverage Areas:**
-
-| Test Suite | What's Covered |
-|------------|---------------|
-| `auth.middleware.test` | `requireAuth`, `requireAdmin`, Super Admin bypass |
-| `versioning.test` | 50-version limit, LIFO sorting, version restore |
-| `wiki-linking.test` | `[[Title]]` extraction, edge cases, nested brackets |
-| `dns.validation.test` | MX record lookup, invalid domains, disposable emails |
-| `env.validation.test` | Zod env schema, missing fields, short secrets |
+> On Windows PowerShell, if `tsc` is blocked by execution policy:
+>
+> ```
+> cmd /c npx.cmd tsc --noEmit --incremental false --ignoreDeprecations 5.0
+> ```
 
 ---
 
-## 🛠️ Maintenance Scripts
+## 📜 NPM Scripts
 
-CLI scripts for common admin operations (run from the project root):
+| Script | Description |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm start` | Start production server |
+| `npm run check` | TypeScript type check |
+| `npm test` | Run tests |
+| `npm run test:watch` | Test watch mode |
+| `npm run test:coverage` | Coverage report |
+| `npm run script:promote-admin` | Promote a user to admin via CLI |
+| `npm run script:cleanup-user` | Cleanup a user via CLI |
 
-```bash
-# Promote a user to Admin role
-npm run script:promote-admin user@example.com
+---
 
-# Permanently delete a user by email
-npm run script:cleanup-user testuser@example.com
+## 🔒 Security Notes
+
+- Raw HTML rendering is removed from Markdown display (XSS prevention)
+- Session checks validate against deleted/banned user state on every request
+- Password reset is protected with input validation, rate limiting, OTP attempt caps, and verified reset state
+- Private article existence is never leaked to unauthorized users through wiki link resolution
+- Admin actions invalidate user sessions immediately on ban/delete
+- CSP is configured via `helmet` in `server/index.ts` — update directives if you add external assets
+
+---
+
+## ☁️ Deployment
+
+Compatible with **Railway**, **Render**, and similar Node.js hosting platforms.
+
+**Checklist before deploying:**
+
+- [ ] All environment variables are set
+- [ ] MongoDB Atlas cluster is reachable from host
+- [ ] SMTP credentials are valid from hosted environment
+- [ ] `CORS_ORIGINS` includes your production frontend URL
+- [ ] `NODE_ENV=production` is set (enables secure cookies)
+
+**Health check endpoint:**
+
+```
+GET /healthz
 ```
 
-See [scripts/README.md](scripts/README.md) for full documentation on each script.
+---
+
+## ⚠️ Known Issues / Follow-ups
+
+- Auth responses still return a JWT even though the app uses session-based auth
+- `jsonwebtoken` uses a local type shim at `server/types/jsonwebtoken.d.ts`
+- Edit permissions are intentionally broader than delete permissions
+- Screenshots in `client/public/` should be refreshed after significant UI changes
 
 ---
 
-## 🚢 Deployment
+## 📄 License
 
-This project is configured for **Railway** deployment out of the box.
-
-### Railway (Recommended)
-1. Push your code to GitHub
-2. Create a new project on [Railway](https://railway.app)
-3. Connect your GitHub repository
-4. Add all [environment variables](#-environment-variables) in the Railway dashboard
-5. Railway auto-detects the `railway.json` config and deploys
-
-### Manual / VPS
-```bash
-npm run build
-NODE_ENV=production npm start
-```
-
-> Ensure all environment variables are set in your hosting environment before starting.
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-Built with ❤️ using React, Express, and MongoDB.
-
-[⬆ Back to Top](#-knowledge-vault)
-
-</div>
+[MIT](LICENSE) © [mdsamimrrza](https://github.com/mdsamimrrza)
