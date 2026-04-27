@@ -1,6 +1,19 @@
 import { Request, Response, NextFunction } from "express";
 import { storage } from "../storage";
 import { getEnv } from "../lib/env";
+import { destroySessionAsync } from "../lib/session-utils";
+
+async function getValidatedSessionUser(req: Request) {
+  if (!req.session.userId) return null;
+
+  const user = await storage.getUserById(req.session.userId);
+  if (!user || user.isBanned) {
+    await destroySessionAsync(req);
+    return null;
+  }
+
+  return user;
+}
 
 /**
  * Middleware to check if the user is authenticated via passport
@@ -42,9 +55,9 @@ export function requireRole(role: string) {
 /**
  * Middleware to require a logged-in user session (legacy support)
  */
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  console.log(`[requireAuth] Session userId: ${req.session.userId}`);
-  if (!req.session.userId) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const user = await getValidatedSessionUser(req);
+  if (!user) {
     res.status(401).json({ message: "You must be logged in to perform this action." });
     return;
   }
@@ -55,12 +68,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
  * Middleware to require Admin privileges (legacy support)
  */
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.userId) {
-    res.status(401).json({ message: "Not authenticated" });
-    return;
-  }
-
-  const user = await storage.getUserById(req.session.userId);
+  const user = await getValidatedSessionUser(req);
   if (!user || !user.isAdmin) {
     res.status(403).json({ message: "Admin privileges required" });
     return;

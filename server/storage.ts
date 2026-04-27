@@ -21,11 +21,12 @@ export interface IStorage {
   getArticle(id: string, userId?: string): Promise<Article | undefined>;
   createArticle(article: InsertArticle, authorId?: string): Promise<Article>;
   updateArticle(id: string, article: Partial<InsertArticle>, userId?: string): Promise<Article | undefined>;
-  deleteArticle(id: string): Promise<boolean>;
+  deleteArticle(id: string, userId?: string): Promise<boolean>;
   getArticleBySlug(slug: string, userId?: string): Promise<Article | undefined>;
   getArticleVersions(articleId: string): Promise<ArticleVersion[]>;
   getAllTags(): Promise<TagCount[]>;
   restoreVersion(articleId: string, versionId: string, userId?: string): Promise<Article | undefined>;
+  resolveArticleTitles(titles: string[], userId?: string): Promise<Record<string, string | null>>;
 
   // Favorites (per-user)
   getUserFavoriteIds(userId: string): Promise<string[]>;
@@ -36,6 +37,21 @@ export interface IStorage {
 }
 
 export class MongoStorage implements IStorage {
+  private async canManageArticle(articleId: string, userId?: string): Promise<boolean> {
+    if (!userId || !isValidObjectId(articleId)) return false;
+
+    const [article, actor] = await Promise.all([
+      ArticleModel.findById(articleId).select("authorId"),
+      this.getUserById(userId),
+    ]);
+
+    if (!article || !actor || actor.isBanned) return false;
+    if (actor.isAdmin) return true;
+
+    const authorId = article.get("authorId")?.toString();
+    return !!authorId && authorId === userId;
+  }
+
   // ──── Auth ────
   async createUser(data: RegisterInput): Promise<User> {
     const hashedPassword = await bcrypt.hash(data.password, 12);
@@ -189,6 +205,10 @@ export class MongoStorage implements IStorage {
 
   async updateArticle(id: string, updates: Partial<InsertArticle>, userId?: string): Promise<Article | undefined> {
     if (!isValidObjectId(id)) return undefined;
+    if (!(await this.canManageArticle(id, userId))) {
+      throw new Error("FORBIDDEN");
+    }
+
     const data: any = { ...updates };
     if (updates.title) {
       data.title = updates.title.trim();
@@ -213,8 +233,12 @@ export class MongoStorage implements IStorage {
     return json;
   }
 
-  async deleteArticle(id: string): Promise<boolean> {
+  async deleteArticle(id: string, userId?: string): Promise<boolean> {
     if (!isValidObjectId(id)) return false;
+    if (!(await this.canManageArticle(id, userId))) {
+      throw new Error("FORBIDDEN");
+    }
+
     const result = await ArticleModel.findByIdAndDelete(id);
     if (!result) return false;
     await VersionModel.deleteMany({ articleId: id });
@@ -240,6 +264,10 @@ export class MongoStorage implements IStorage {
 
   async restoreVersion(articleId: string, versionId: string, userId?: string): Promise<Article | undefined> {
     if (!isValidObjectId(articleId) || !isValidObjectId(versionId)) return undefined;
+    if (!(await this.canManageArticle(articleId, userId))) {
+      throw new Error("FORBIDDEN");
+    }
+
     const version = await VersionModel.findById(versionId);
     if (!version || !version.articleId || version.articleId.toString() !== articleId) return undefined;
     
@@ -267,13 +295,31 @@ export class MongoStorage implements IStorage {
   }
 
   // ──── Wiki-link title resolution ────
-  async resolveArticleTitles(titles: string[]): Promise<Record<string, string | null>> {
+  async resolveArticleTitles(titles: string[], userId?: string): Promise<Record<string, string | null>> {
     const result: Record<string, string | null> = {};
     if (titles.length === 0) return result;
 
+    const visibilityFilter = userId
+      ? {
+          $or: [
+            { isPublic: true },
+            { authorId: new mongoose.Types.ObjectId(userId) },
+            { authorId: { $exists: false } },
+          ],
+        }
+      : {
+          $or: [
+            { isPublic: true },
+            { authorId: { $exists: false } },
+          ],
+        };
+
     // Case-insensitive match, tolerant of leading/trailing whitespace in stored titles
     const articles = await ArticleModel.find(
-      { title: { $in: titles.map(t => new RegExp(`^\\s*${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i')) } },
+      {
+        ...visibilityFilter,
+        title: { $in: titles.map(t => new RegExp(`^\\s*${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i')) },
+      },
       { _id: 1, title: 1 }
     ).lean();
 

@@ -1,14 +1,15 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import { z } from "zod";
 import { storage } from "../../storage";
-import { registerSchema, loginSchema, userSchema } from "@shared/schema";
+import { registerSchema, loginSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { randomInt } from "crypto";
 import rateLimit from "express-rate-limit";
 import { UserModel } from "../../models";
 import { sendOTP, isValidEmailDomain } from "../../lib/email";
 import { getEnv } from "../../lib/env";
+import { destroySessionAsync, invalidateUserSessions } from "../../lib/session-utils";
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -18,30 +19,63 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many password reset requests. Please wait 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many verification attempts. Please wait 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  masterKey: z.string().min(1).optional(),
+});
+
+const verifyOtpSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  otp: z.string().regex(/^\d{6}$/, "Verification code must be 6 digits"),
+});
+
+const resetPasswordSchema = verifyOtpSchema.extend({
+  newPassword: registerSchema.shape.password,
+});
+
 const router = Router();
 
 const signToken = (user: any) => {
   const env = getEnv();
   return jwt.sign(
-    { 
-      userId: user.id, 
+    {
+      userId: user.id,
       isAdmin: user.isAdmin,
-      email: user.email 
-    }, 
-    env.JWT_SECRET || "fallback_secret", 
+      email: user.email,
+    },
+    env.JWT_SECRET || "fallback_secret",
     { expiresIn: "7d" }
   );
 };
 
-// ──── Auth (Me) ────
 router.get("/me", async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ message: "Not authenticated" });
+
   const user = await storage.getUserById(req.session.userId);
-  if (!user) return res.status(401).json({ message: "User not found" });
+  if (!user || user.isBanned) {
+    await destroySessionAsync(req);
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
   res.json(user);
 });
 
-// ──── Auth (Register) ────
 router.post("/register", async (req, res) => {
   try {
     const data = registerSchema.parse(req.body);
@@ -60,7 +94,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// ──── Auth (Login) ────
 router.post("/login", loginLimiter, async (req, res) => {
   try {
     const data = loginSchema.parse(req.body);
@@ -69,7 +102,6 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // ✅ SECURITY FIX: Check ban status before creating session
     if (user.isBanned) {
       return res.status(403).json({ message: "Your account has been suspended. Please contact an administrator." });
     }
@@ -85,27 +117,22 @@ router.post("/login", loginLimiter, async (req, res) => {
   }
 });
 
-// ──── Auth (Logout) ────
 router.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.status(200).json({ message: "Logged out successfully" });
   });
 });
 
-// ──── Forgot Password ────
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   try {
-    const { email, masterKey } = req.body; // Use loose destructuring to avoid Zod issues for now
+    const { email, masterKey } = forgotPasswordSchema.parse(req.body);
+    const normalizedEmail = email.toLowerCase().trim();
 
-    const normalizedEmail = (email || "").toLowerCase().trim();
-
-    // 1. Hard-block common test emails
-    const blacklistedEmails = ['user@gmail.com', 'test@gmail.com', 'admin@gmail.com'];
+    const blacklistedEmails = ["user@gmail.com", "test@gmail.com", "admin@gmail.com"];
     if (blacklistedEmails.includes(normalizedEmail)) {
       return res.status(400).json({ message: "This test email is not authorized for password recovery." });
     }
 
-    // 2. DNS Validation: Check if the domain actually exists to prevent bounces
     if (!(await isValidEmailDomain(normalizedEmail))) {
       return res.status(400).json({ message: "Email domain not found. Please check your email spelling to avoid bounces." });
     }
@@ -115,22 +142,20 @@ router.post("/forgot-password", async (req, res) => {
       return res.status(404).json({ message: "No account found with this email address." });
     }
 
-    // 3. Special check for Super Admin: Require Master Key
     const env = getEnv();
     const superAdminEmail = (env.SUPER_ADMIN_EMAIL || "").toLowerCase().trim();
     if (normalizedEmail === superAdminEmail && superAdminEmail !== "") {
       if (!masterKey) {
-        return res.status(403).json({ message: "SECRET_KEY_REQUIRED", email: email });
+        return res.status(403).json({ message: "SECRET_KEY_REQUIRED", email });
       }
       if (masterKey !== env.ADMIN_SECRET_KEY) {
         return res.status(401).json({ message: "Invalid Master Key. Authorization denied." });
       }
     }
 
-    // 4. Rate limiting: 60 seconds between OTP requests
     const lastRequest = (existingUser as any).lastResetRequestAt;
     if (lastRequest && Date.now() - new Date(lastRequest).getTime() < 60 * 1000) {
-      const remaining = Math.ceil(( 60 * 1000 - (Date.now() - new Date(lastRequest).getTime())) / 1000);
+      const remaining = Math.ceil((60 * 1000 - (Date.now() - new Date(lastRequest).getTime())) / 1000);
       return res.status(429).json({ message: `Please wait ${remaining} seconds before requesting another code.` });
     }
 
@@ -139,15 +164,21 @@ router.post("/forgot-password", async (req, res) => {
 
     await UserModel.findOneAndUpdate(
       { email: normalizedEmail },
-      { $set: { resetPasswordOTP: otp, resetPasswordExpires: expires, lastResetRequestAt: new Date() } },
+      {
+        $set: {
+          resetPasswordOTP: otp,
+          resetPasswordExpires: expires,
+          resetPasswordAttempts: 0,
+          resetPasswordVerifiedAt: null,
+          lastResetRequestAt: new Date(),
+        },
+      },
       { new: true }
     );
 
-
-
     try {
       await sendOTP(normalizedEmail, otp, "Password Reset Code");
-    } catch (mailError: any) {
+    } catch (_mailError: any) {
       return res.status(400).json({ message: "Email delivery failed. Please check your SMTP settings." });
     }
 
@@ -157,50 +188,108 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-// ──── Verify OTP ────
-router.post("/verify-otp", async (req, res) => {
-  const { email, otp } = req.body;
-  const user = await UserModel.findOne({ 
-    email: (email || "").toLowerCase(), 
-    resetPasswordOTP: otp,
-    resetPasswordExpires: { $gt: new Date() }
-  });
+router.post("/verify-otp", otpLimiter, async (req, res) => {
+  try {
+    const { email, otp } = verifyOtpSchema.parse(req.body);
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await UserModel.findOne({ email: normalizedEmail });
 
-  if (!user) return res.status(400).json({ message: "Invalid or expired verification code." });
-  res.json({ message: "Verification successful." });
+    if (!user || !user.resetPasswordOTP || !user.resetPasswordExpires) {
+      return res.status(400).json({ message: "Invalid or expired verification code." });
+    }
+
+    if (user.resetPasswordExpires.getTime() <= Date.now()) {
+      await UserModel.updateOne(
+        { _id: user._id },
+        {
+          $unset: { resetPasswordOTP: "", resetPasswordExpires: "", resetPasswordVerifiedAt: "" },
+          $set: { resetPasswordAttempts: 0 },
+        }
+      );
+      return res.status(400).json({ message: "Invalid or expired verification code." });
+    }
+
+    if ((user.resetPasswordAttempts ?? 0) >= 5) {
+      await UserModel.updateOne(
+        { _id: user._id },
+        {
+          $unset: { resetPasswordOTP: "", resetPasswordExpires: "", resetPasswordVerifiedAt: "" },
+          $set: { resetPasswordAttempts: 0 },
+        }
+      );
+      return res.status(429).json({ message: "Too many invalid verification attempts. Please request a new code." });
+    }
+
+    if (user.resetPasswordOTP !== otp) {
+      const nextAttempts = (user.resetPasswordAttempts ?? 0) + 1;
+      await UserModel.updateOne(
+        { _id: user._id },
+        nextAttempts >= 5
+          ? {
+              $unset: { resetPasswordOTP: "", resetPasswordExpires: "", resetPasswordVerifiedAt: "" },
+              $set: { resetPasswordAttempts: 0 },
+            }
+          : {
+              $set: { resetPasswordAttempts: nextAttempts },
+            }
+      );
+      return res.status(400).json({ message: "Invalid or expired verification code." });
+    }
+
+    await UserModel.updateOne(
+      { _id: user._id },
+      { $set: { resetPasswordAttempts: 0, resetPasswordVerifiedAt: new Date() } }
+    );
+
+    res.json({ message: "Verification successful." });
+  } catch (err: any) {
+    const status = err instanceof z.ZodError ? 400 : 500;
+    res.status(status).json({ message: err.message });
+  }
 });
 
-// ──── Reset Password ────
-router.post("/reset-password", async (req, res) => {
-  const { email, otp, newPassword } = req.body;
-
-  const user = await UserModel.findOne({ 
-    email: (email || "").toLowerCase(), 
-    resetPasswordOTP: otp,
-    resetPasswordExpires: { $gt: new Date() }
-  });
-
-  if (!user) return res.status(400).json({ message: "Invalid or expired verification session." });
-
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-  await UserModel.updateOne(
-    { _id: user._id },
-    { 
-      $set: { hashedPassword },
-      $unset: { resetPasswordOTP: "", resetPasswordExpires: "" } 
-    }
-  );
-
-  // ✅ SECURITY FIX: Invalidate all existing sessions after password reset
+router.post("/reset-password", otpLimiter, async (req, res) => {
   try {
-    await mongoose.connection.collection('sessions').deleteMany({
-      'session.userId': user._id.toString()
-    });
-  } catch (err) {
-    console.error("Failed to invalidate sessions on password reset:", err);
-  }
+    const { email, otp, newPassword } = resetPasswordSchema.parse(req.body);
+    const normalizedEmail = email.toLowerCase().trim();
 
-  res.json({ message: "Password reset successfully." });
+    const user = await UserModel.findOne({
+      email: normalizedEmail,
+      resetPasswordOTP: otp,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user || !user.resetPasswordVerifiedAt) {
+      return res.status(400).json({ message: "Invalid or expired verification session." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await UserModel.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          hashedPassword,
+          resetPasswordAttempts: 0,
+        },
+        $unset: {
+          resetPasswordOTP: "",
+          resetPasswordExpires: "",
+          resetPasswordVerifiedAt: "",
+        },
+      }
+    );
+
+    try {
+      await invalidateUserSessions(user._id.toString());
+    } catch (err) {
+      console.error("Failed to invalidate sessions on password reset:", err);
+    }
+
+    res.json({ message: "Password reset successfully." });
+  } catch (err: any) {
+    const status = err instanceof z.ZodError ? 400 : 500;
+    res.status(status).json({ message: err.message });
+  }
 });
 
 export default router;

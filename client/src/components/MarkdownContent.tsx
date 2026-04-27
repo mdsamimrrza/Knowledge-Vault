@@ -43,7 +43,17 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
 
   const components: Components = useMemo(
     () => ({
-      a: ({ href, children, node, ref, ...props }) => {
+      ins: ({ children }) => (
+        <span className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-0.5 rounded font-bold">
+          {children}
+        </span>
+      ),
+      del: ({ children }) => (
+        <span className="bg-rose-500/20 text-rose-700 dark:text-rose-400 line-through px-0.5 rounded opacity-70">
+          {children}
+        </span>
+      ),
+      a: ({ href, children, node, ...props }) => {
         // Handle wiki-link:// protocol
         if (href?.startsWith("wikilink://")) {
           const title = decodeURIComponent(href.replace("wikilink://", ""));

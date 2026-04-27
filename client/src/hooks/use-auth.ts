@@ -8,13 +8,14 @@ export function useUser() {
     queryKey: [api.auth.me.path],
     queryFn: async () => {
       const res = await fetch(api.auth.me.path, { credentials: "include" });
+      if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to get user");
       const data = await res.json();
-      if (!data) return null;
       return api.auth.me.responses[200].parse(data);
     },
-    staleTime: Infinity, // don't refetch unless we invalidate manually
+    staleTime: Infinity,
     retry: false,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -36,8 +37,7 @@ export function useRegister() {
       }
       return api.auth.register.responses[201].parse(await res.json());
     },
-    onSuccess: (data) => {
-      localStorage.setItem("admin_token", data.token);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
     },
   });
@@ -61,8 +61,7 @@ export function useLogin() {
       }
       return api.auth.login.responses[200].parse(await res.json());
     },
-    onSuccess: (data) => {
-      localStorage.setItem("admin_token", data.token);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
       // Refetch articles to update isFavorite fields
       queryClient.invalidateQueries({ queryKey: [api.articles.list.path] });
@@ -82,7 +81,6 @@ export function useLogout() {
       if (!res.ok) throw new Error("Logout failed");
     },
     onSuccess: () => {
-      localStorage.removeItem("admin_token");
       queryClient.setQueryData([api.auth.me.path], null);
       // Refetch articles to clear isFavorite fields
       queryClient.invalidateQueries({ queryKey: [api.articles.list.path] });

@@ -5,6 +5,7 @@ import { randomInt } from "crypto";
 import { requireAdmin } from "../../middleware/auth";
 import { sendOTP } from "../../lib/email";
 import { getEnv } from "../../lib/env";
+import { invalidateUserSessions } from "../../lib/session-utils";
 
 const router = Router();
 
@@ -209,6 +210,7 @@ const confirmActionHandler = async (req: any, res: any, expectedType?: string) =
 
   if (pending.type === 'DELETE') {
     const success = await storage.deleteUser(id);
+    await invalidateUserSessions(id);
     delete req.session.pendingAction;
     delete req.session.masterKeyVerifiedFor;
     if (!success) return res.status(404).json({ message: "User not found" });
@@ -221,6 +223,9 @@ const confirmActionHandler = async (req: any, res: any, expectedType?: string) =
   if (pending.type === 'BAN') updates = { isBanned: true };
 
   const user = await storage.updateUserStatus(id, updates);
+  if (pending.type === "BAN") {
+    await invalidateUserSessions(id);
+  }
   delete req.session.pendingAction;
   delete req.session.masterKeyVerifiedFor;
   
