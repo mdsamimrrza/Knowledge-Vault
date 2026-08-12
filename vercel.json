@@ -1,8 +1,14 @@
 {
-  "builds": [
+  "version": 2,
+  "outputDirectory": "dist/public",
+  "rewrites": [
     {
-      "src": "Dockerfile",
-      "use": "@vercel/docker"
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
