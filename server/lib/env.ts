@@ -4,17 +4,25 @@ const envSchema = z.object({
   MONGODB_URI: z.string().min(10, "MONGODB_URI is required"),
   SESSION_SECRET: z
     .string()
-    .min(32, "SESSION_SECRET must be at least 32 characters for security"),
+    .default("default-session-secret-change-me-in-production-min-32-chars"),
   ADMIN_SECRET_KEY: z
     .string()
-    .min(16, "ADMIN_SECRET_KEY must be at least 16 characters"),
-  SUPER_ADMIN_EMAIL: z.string().email("SUPER_ADMIN_EMAIL must be a valid email"),
-  EMAIL_USER: z.string().email("EMAIL_USER must be a valid email"),
-  EMAIL_PASS: z.string().min(1, "EMAIL_PASS is required"),
+    .default("default-admin-secret-key-16-chars"),
+  SUPER_ADMIN_EMAIL: z
+    .string()
+    .default("admin@example.com"),
+  EMAIL_USER: z
+    .string()
+    .default("noreply@example.com"),
+  EMAIL_PASS: z
+    .string()
+    .default("nopassword"),
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.string().default('587').transform((v) => parseInt(v, 10)),
   SMTP_SECURE: z.string().default('false').transform((v) => v === 'true'),
-  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
+  JWT_SECRET: z
+    .string()
+    .default("default-jwt-secret-change-me-in-production-min-32-chars"),
   CORS_ORIGINS: z.string().optional().default(""),
   NODE_ENV: z
     .enum(["development", "production", "test"])

@@ -175,9 +175,7 @@ async function startServer() {
 
   } catch (error: any) {
     console.error("❌ FATAL STARTUP ERROR:", error.message);
-    // In cloud environments, we keep the process alive so the logs can be read
-    // and the healthcheck still responds with 'ok' but mode 'error' or similar
-    // For now, we just log and let it sit.
+    throw error;
   }
 }
 
