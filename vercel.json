@@ -1,15 +1,8 @@
 {
-  "version": 2,
-  "framework": "vite",
-  "outputDirectory": "dist/public",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "Dockerfile",
+      "use": "@vercel/docker"
     }
   ]
 }

@@ -191,8 +191,8 @@ async function setupFrontendRoutes() {
   await setupVite(httpServer, app);
 }
 
-// 2. BOOTSTRAP (Local & Non-Vercel environments)
-if (!process.env.VERCEL) {
+// 2. BOOTSTRAP
+if (!process.env.VERCEL_SERVERLESS) {
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   httpServer.listen(port, "0.0.0.0", async () => {
