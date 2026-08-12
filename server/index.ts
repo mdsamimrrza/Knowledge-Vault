@@ -191,22 +191,20 @@ async function setupFrontendRoutes() {
   await setupVite(httpServer, app);
 }
 
-// 2. BOOTSTRAP (Local & Non-Vercel environments)
-if (!process.env.VERCEL) {
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+// 2. BOOTSTRAP
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  httpServer.listen(port, "0.0.0.0", async () => {
-    console.log("=========================================");
-    console.log(`🚀 SERVER IS LIVE ON PORT: ${port}`);
-    console.log(`🔗 HEALTHCHECK: http://0.0.0.0:${port}/healthz`);
-    console.log("=========================================");
+httpServer.listen(port, "0.0.0.0", async () => {
+  console.log("=========================================");
+  console.log(`🚀 SERVER IS LIVE ON PORT: ${port}`);
+  console.log(`🔗 HEALTHCHECK: http://0.0.0.0:${port}/healthz`);
+  console.log("=========================================");
 
-    await initApp();
+  await initApp();
 
-    try {
-      await setupFrontendRoutes();
-    } catch (error: any) {
-      console.error("❌ FRONTEND ROUTE SETUP FAILED:", error.message);
-    }
-  });
-}
+  try {
+    await setupFrontendRoutes();
+  } catch (error: any) {
+    console.error("❌ FRONTEND ROUTE SETUP FAILED:", error.message);
+  }
+});

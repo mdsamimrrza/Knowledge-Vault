@@ -1,14 +1,15 @@
 {
-  "version": 2,
-  "outputDirectory": "dist/public",
+  "services": {
+    "app": {
+      "entrypoint": "Dockerfile.vercel"
+    }
+  },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": {
+        "service": "app"
+      }
     }
   ]
 }
