@@ -10,8 +10,16 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { connectDB } from "./db";
 
-const app = express();
+export const app = express();
 const httpServer = createServer(app);
+
+let isAppInitialized = false;
+
+export async function initApp() {
+  if (isAppInitialized) return;
+  await startServer();
+  isAppInitialized = true;
+}
 
 // 1. IRONCLAD HEALTHCHECK (Registered immediately)
 // This must respond even before validation/DB connection
@@ -88,7 +96,7 @@ async function startServer() {
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:"],
-          connectSrc: ["'self'", "https://knowledgebase-wdt5.onrender.com", "https://knowledge-vault.up.railway.app", "ws:", "wss:"],
+          connectSrc: ["'self'", "https://*.vercel.app", "ws:", "wss:"],
           workerSrc: ["'self'", "blob:"],
         }
       }
@@ -98,9 +106,7 @@ async function startServer() {
     const allowedOrigins = env.CORS_ORIGINS 
       ? env.CORS_ORIGINS.split(',').map(s => s.trim())
       : [
-          "https://knowledge-vault.onrender.com",
-          "https://knowledgebase-wdt5.onrender.com",
-          "https://knowledge-vault.up.railway.app",
+          "https://knowledge-vault-silk.vercel.app",
           `http://localhost:${env.PORT || 5000}`,
           "http://localhost:5173"
         ];
@@ -187,24 +193,22 @@ async function setupFrontendRoutes() {
   await setupVite(httpServer, app);
 }
 
-// 2. BOOTSTRAP
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+// 2. BOOTSTRAP (Local & Non-Vercel environments)
+if (!process.env.VERCEL) {
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-// Start listening IMMEDIATELY and SYNCHRONOUSLY
-// This ensures Railway healthcheck passes Attempt #1
-httpServer.listen(port, "0.0.0.0", async () => {
-  console.log("=========================================");
-  console.log(`🚀 SERVER IS LIVE ON PORT: ${port}`);
-  console.log(`🔗 HEALTHCHECK: http://0.0.0.0:${port}/healthz`);
-  console.log("=========================================");
+  httpServer.listen(port, "0.0.0.0", async () => {
+    console.log("=========================================");
+    console.log(`🚀 SERVER IS LIVE ON PORT: ${port}`);
+    console.log(`🔗 HEALTHCHECK: http://0.0.0.0:${port}/healthz`);
+    console.log("=========================================");
 
-  // Now start the heavy lifting (MongoDB, routes, session)
-  await startServer();
+    await initApp();
 
-  try {
-    // Then setup the frontend
-    await setupFrontendRoutes();
-  } catch (error: any) {
-    console.error("❌ FRONTEND ROUTE SETUP FAILED:", error.message);
-  }
-});
+    try {
+      await setupFrontendRoutes();
+    } catch (error: any) {
+      console.error("❌ FRONTEND ROUTE SETUP FAILED:", error.message);
+    }
+  });
+}

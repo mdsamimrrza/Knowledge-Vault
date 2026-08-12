@@ -103,6 +103,8 @@
 
 ```
 Knowledge-Vault/
+├── api/
+│   └── index.ts          # Vercel serverless function entrypoint
 ├── client/
 │   ├── public/
 │   │   ├── adminPanel.png
@@ -121,7 +123,6 @@ Knowledge-Vault/
 │   ├── lib/
 │   ├── middleware/
 │   ├── routes/
-│   │   └── api/
 │   ├── types/
 │   ├── db.ts
 │   ├── index.ts
@@ -134,6 +135,7 @@ Knowledge-Vault/
 │   ├── schema.ts
 │   └── wiki-links.ts
 ├── scripts/
+├── vercel.json           # Vercel deployment configuration
 ├── package.json
 └── tsconfig.json
 ```
@@ -316,15 +318,18 @@ npm run check
 
 ## ☁️ Deployment
 
-Compatible with **Railway**, **Render**, and similar Node.js hosting platforms.
+Configured for **Vercel** deployment using **Vercel Serverless Functions** for the Express backend and **Vercel Static Hosting** for the React Vite frontend.
 
-**Checklist before deploying:**
+**Deployment Steps:**
 
-- [ ] All environment variables are set
-- [ ] MongoDB Atlas cluster is reachable from host
-- [ ] SMTP credentials are valid from hosted environment
-- [ ] `CORS_ORIGINS` includes your production frontend URL
-- [ ] `NODE_ENV=production` is set (enables secure cookies)
+1. Push your changes to GitHub and import the project into **Vercel**.
+2. Set up Environment Variables in Vercel Project Settings:
+   - `MONGODB_URI`
+   - `SESSION_SECRET`
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+   - `VITE_NEURAL_QUERY_URL`
+   - `CORS_ORIGINS` (e.g., `https://knowledge-vault-silk.vercel.app`)
+3. Vercel reads `vercel.json` and `api/index.ts` automatically to route both static assets and API requests seamlessly.
 
 **Health check endpoint:**
 
