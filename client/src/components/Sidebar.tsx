@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { BookOpen, Star, Tag, Plus, Library, Menu, X, LogIn, LogOut, User, Mail, CalendarDays, Sun, Moon, Shield, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { BookOpen, Star, Tag, Plus, Library, Menu, X, LogIn, LogOut, User, Mail, CalendarDays, Sun, Moon, Shield, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useUser, useLogout } from "@/hooks/use-auth";
@@ -13,27 +13,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
+
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; isCollapsed?: boolean }) {
   const [location] = useLocation();
-  const [isNeuralQueryOpen, setIsNeuralQueryOpen] = useState(false);
+
   const { data: user } = useUser();
   const logoutMutation = useLogout();
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { icon: Library, label: "All Articles", href: "/", requiresAuth: false },
-    { icon: Sparkles, label: "NeuralQuery", href: "/agent", comingSoon: true, requiresAuth: false },
     { icon: Star, label: "Favorites", href: "/favorites", requiresAuth: true },
     { icon: Tag, label: "Tags", href: "/tags", requiresAuth: false },
     { icon: Shield, label: "Admin Panel", href: "/admin", requiresAuth: true, adminOnly: true },
@@ -118,18 +110,6 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
               </div>
             );
 
-            if (item.comingSoon) {
-              return (
-                <button
-                  key={item.href} 
-                  type="button"
-                  onClick={() => setIsNeuralQueryOpen(true)}
-                  className="w-full text-left"
-                >
-                  {content}
-                </button>
-              );
-            }
 
             return (
               <Link key={item.href} href={item.href} onClick={() => onNavigate?.()} className="block w-full">
@@ -139,28 +119,6 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
           })}
       </nav>
 
-      <Dialog open={isNeuralQueryOpen} onOpenChange={setIsNeuralQueryOpen}>
-        <DialogContent className="sm:max-w-md glass-card border-white/20 shadow-2xl rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl font-display font-bold text-primary">
-              <Sparkles className="w-5 h-5" />
-              NeuralQuery
-            </DialogTitle>
-            <DialogDescription className="pt-2 text-base text-muted-foreground">
-              Coming soon. This feature is not available yet, but the button now opens a consistent placeholder card.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              onClick={() => setIsNeuralQueryOpen(false)}
-              className="w-full sm:w-auto rounded-xl"
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* User section */}
       <div className="space-y-3">

@@ -4,6 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import { useEffect } from "react";
+
 
 // Pages
 import Home from "@/pages/Home";
@@ -14,6 +16,13 @@ import ArticleHistory from "@/pages/ArticleHistory";
 import TagsPage from "@/pages/TagsPage";
 import AuthPage from "@/pages/AuthPage";
 import AdminPage from "@/pages/AdminPage";
+
+function SearchRedirect() {
+  useEffect(() => {
+    window.location.replace("https://knowledge-bases.vercel.app/search");
+  }, []);
+  return null;
+}
 
 function Router() {
   const [location] = useLocation();
@@ -28,6 +37,7 @@ function Router() {
       
       <Route path="/favorites" component={Home} />
       <Route path="/tags" component={TagsPage} />
+      <Route path="/search" component={SearchRedirect} />
       <Route path="/admin" component={AdminPage} />
 
       <Route component={NotFound} />
