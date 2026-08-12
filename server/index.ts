@@ -198,12 +198,13 @@ httpServer.listen(port, "0.0.0.0", async () => {
   console.log(`🔗 HEALTHCHECK: http://0.0.0.0:${port}/healthz`);
   console.log("=========================================");
 
+  // Now start the heavy lifting (MongoDB, routes, session)
+  await startServer();
+
   try {
+    // Then setup the frontend
     await setupFrontendRoutes();
   } catch (error: any) {
     console.error("❌ FRONTEND ROUTE SETUP FAILED:", error.message);
   }
-  
-  // Now start the heavy lifting
-  startServer();
 });

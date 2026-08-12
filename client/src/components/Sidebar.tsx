@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { BookOpen, Star, Tag, Plus, Library, Menu, X, LogIn, LogOut, User, Mail, CalendarDays, Sun, Moon, Shield, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpen, Star, Tag, Plus, Library, Menu, X, LogIn, LogOut, User, Mail, CalendarDays, Sun, Moon, Shield, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useUser, useLogout } from "@/hooks/use-auth";
@@ -26,6 +26,7 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
 
   const navItems = [
     { icon: Library, label: "All Articles", href: "/", requiresAuth: false },
+    { icon: Sparkles, label: "NeuralQuery", href: import.meta.env.VITE_NEURAL_QUERY_URL || "https://knowledge-bases.vercel.app/search", external: true, requiresAuth: false },
     { icon: Star, label: "Favorites", href: "/favorites", requiresAuth: true },
     { icon: Tag, label: "Tags", href: "/tags", requiresAuth: false },
     { icon: Shield, label: "Admin Panel", href: "/admin", requiresAuth: true, adminOnly: true },
@@ -110,6 +111,13 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
               </div>
             );
 
+            if (item.external) {
+              return (
+                <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer" className="block w-full">
+                  {content}
+                </a>
+              );
+            }
 
             return (
               <Link key={item.href} href={item.href} onClick={() => onNavigate?.()} className="block w-full">
@@ -118,7 +126,6 @@ function SidebarContent({ onNavigate, isCollapsed }: { onNavigate?: () => void; 
             );
           })}
       </nav>
-
 
       {/* User section */}
       <div className="space-y-3">
